@@ -11,7 +11,7 @@ const QRCode = require('qrcode');
 const router = express.Router();
 
 const LABELS = { present: 'Présent', retard: 'En retard', absent: 'Absent', permissionnaire: 'Permissionnaire' };
-const CHEMIN_CHROME = process.env.CHROME_PATH || 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
+const CHEMIN_CHROME = process.env.CHROME_PATH || undefined;
 const MOT_DE_PASSE_PROTECTION = 'gestion-presence-verrouille';
 
 async function recupererDonneesSeance(seanceId, adminId) {
@@ -491,7 +491,10 @@ router.get('/seance/:id/pdf', verifierToken, async (req, res) => {
     const donnees = await recupererDonneesSeance(req.params.id, req.adminId);
     if (!donnees) return res.status(404).json({ message: 'Séance introuvable' });
 
-    navigateur = await puppeteer.launch({ args: ['--no-sandbox'], executablePath: CHEMIN_CHROME });
+    navigateur = await puppeteer.launch({
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      executablePath: CHEMIN_CHROME,
+    });
     const page = await navigateur.newPage();
     await page.setContent(genererHtmlSeance(donnees), { waitUntil: 'networkidle0' });
     const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true });
@@ -674,7 +677,10 @@ router.get('/organisation/:id/pdf', verifierToken, async (req, res) => {
     const donnees = await recupererDonneesOrganisation(req.params.id, req.adminId, req.query.classe);
     if (!donnees) return res.status(404).json({ message: 'Organisation introuvable' });
 
-    navigateur = await puppeteer.launch({ args: ['--no-sandbox'], executablePath: CHEMIN_CHROME });
+    navigateur = await puppeteer.launch({
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      executablePath: CHEMIN_CHROME,
+    });
     const page = await navigateur.newPage();
     await page.setContent(genererHtmlOrganisation(donnees), { waitUntil: 'networkidle0' });
     const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true });
@@ -807,7 +813,10 @@ router.get('/membre/:id/pdf', verifierToken, async (req, res) => {
     const donnees = await recupererDonneesMembre(req.params.id, req.adminId);
     if (!donnees) return res.status(404).json({ message: 'Membre introuvable' });
 
-    navigateur = await puppeteer.launch({ args: ['--no-sandbox'], executablePath: CHEMIN_CHROME });
+    navigateur = await puppeteer.launch({
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      executablePath: CHEMIN_CHROME,
+    });
     const page = await navigateur.newPage();
     await page.setContent(genererHtmlMembre(donnees), { waitUntil: 'networkidle0' });
     const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true });
@@ -921,7 +930,10 @@ router.get('/mon-historique/pdf', verifierTokenMembre, async (req, res) => {
     const donnees = await recupererDonneesMembrePourLuiMeme(req.membreId);
     if (!donnees) return res.status(404).json({ message: 'Membre introuvable' });
 
-    navigateur = await puppeteer.launch({ args: ['--no-sandbox'], executablePath: CHEMIN_CHROME });
+    navigateur = await puppeteer.launch({
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      executablePath: CHEMIN_CHROME,
+    });
     const page = await navigateur.newPage();
     await page.setContent(genererHtmlMembre(donnees), { waitUntil: 'networkidle0' });
     const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true });
@@ -1029,7 +1041,10 @@ router.get('/organisation/:id/fiches-qr', verifierToken, async (req, res) => {
       </html>
     `;
 
-    navigateur = await puppeteer.launch({ args: ['--no-sandbox'], executablePath: CHEMIN_CHROME });
+    navigateur = await puppeteer.launch({
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      executablePath: CHEMIN_CHROME,
+    });
     const page = await navigateur.newPage();
     await page.setContent(html, { waitUntil: 'networkidle0' });
     const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true, margin: { top: '15mm', bottom: '15mm', left: '10mm', right: '10mm' } });
