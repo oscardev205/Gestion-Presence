@@ -34,7 +34,7 @@ function EspaceMembre() {
       }
 
       try {
-        const reponse = await axios.get('http://localhost:5000/api/membre-espace/mon-profil', {
+        const reponse = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/membre-espace/mon-profil`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setDonnees(reponse.data);
@@ -57,7 +57,7 @@ function EspaceMembre() {
   const telechargerMonRapport = async (format) => {
     const extensions = { excel: 'xlsx', pdf: 'pdf', word: 'docx' };
     const token = localStorage.getItem('tokenMembre');
-    const reponse = await axios.get(`http://localhost:5000/api/exports/mon-historique/${format}`, {
+    const reponse = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/exports/mon-historique/${format}`, {
       headers: { Authorization: `Bearer ${token}` },
       responseType: 'blob',
     });
@@ -71,7 +71,7 @@ function EspaceMembre() {
 
     const rechargerProfil = async () => {
     const token = localStorage.getItem('tokenMembre');
-    const reponse = await axios.get('http://localhost:5000/api/membre-espace/mon-profil', {
+        const reponse = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/membre-espace/mon-profil`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     setDonnees(reponse.data);
