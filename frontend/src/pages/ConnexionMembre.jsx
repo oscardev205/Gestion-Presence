@@ -64,10 +64,21 @@ function ConnexionMembre() {
   const demarrerScan = async () => {
     setScanActif(true);
     setErreur('');
+
     try {
       await scannerApiRef.current.demarrer();
     } catch (err) {
-      setErreur('Impossible d\'accéder à la caméra, réessaie dans quelques secondes.');
+      let messageErreurTechnique;
+      if (err && err.message === 'AUCUNE_CAMERA') {
+        messageErreurTechnique = 'Aucune caméra détectée. Vérifie que l\'autorisation caméra est bien accordée dans les réglages du navigateur.';
+      } else if (err && err.message === 'DEMARRAGE_TROP_LONG') {
+        messageErreurTechnique = 'La caméra met trop de temps à répondre. Réessaie, ou change de navigateur si ça persiste.';
+      } else if (err && err.name === 'NotAllowedError') {
+        messageErreurTechnique = 'Accès à la caméra refusé. Autorise la caméra dans les réglages du navigateur puis réessaie.';
+      } else {
+        messageErreurTechnique = `Erreur caméra : ${err && err.message ? err.message : 'inconnue'}`;
+      }
+      setErreur(messageErreurTechnique);
       setScanActif(false);
     }
   };

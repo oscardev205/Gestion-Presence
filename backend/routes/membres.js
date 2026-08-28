@@ -127,10 +127,11 @@ router.post('/:id/regenerer-qr', verifierToken, async (req, res) => {
     }
 
     const nouveauQr = crypto.randomUUID();
+    const nouveauPin = String(Math.floor(1000 + Math.random() * 9000));
 
     const resultat = await pool.query(
-      'UPDATE membres SET qr_code_valeur = $1 WHERE id = $2 RETURNING *',
-      [nouveauQr, req.params.id]
+      'UPDATE membres SET qr_code_valeur = $1, code_pin = $2 WHERE id = $3 RETURNING *',
+      [nouveauQr, nouveauPin, req.params.id]
     );
 
     res.json(resultat.rows[0]);
