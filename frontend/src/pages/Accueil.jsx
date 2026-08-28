@@ -1,8 +1,19 @@
 import { Link } from 'react-router-dom';
-import { QrCode, Users, FileDown, ShieldCheck, Building2, ArrowRight } from 'lucide-react';
+import { QrCode, Users, FileDown, ShieldCheck, Building2, ArrowRight, LogOut } from 'lucide-react';
 import Logo from '../components/Logo';
 
 function Accueil() {
+  const admin = JSON.parse(localStorage.getItem('admin') || 'null');
+  const token = localStorage.getItem('token');
+  const estConnecte = admin && token;
+
+  const deconnexion = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('admin');
+    localStorage.removeItem('organisationActive');
+    window.location.reload();
+  };
+
   const fonctionnalites = [
     { icone: QrCode, titre: 'Pointage par QR code', description: 'Chaque membre a son propre QR, et chaque séance aussi. Le pointage se fait en quelques secondes.' },
     { icone: Building2, titre: 'Écoles et associations', description: 'Gérez plusieurs organisations depuis un seul compte, avec classes ou rôles selon le type.' },
@@ -17,26 +28,54 @@ function Accueil() {
           <div className="flex justify-center mb-4">
             <Logo size={64} lien="/" />
           </div>
-          <h1 className="text-white text-2xl sm:text-4xl font-semibold tracking-tight mb-3">
-            La gestion de présence, simplifiée
-          </h1>
-          <p className="text-primary-50 text-sm sm:text-base max-w-xl mx-auto mb-8">
-            Une plateforme pensée pour les écoles et les associations : pointage par QR code, suivi en temps réel, et rapports prêts à l'emploi.
-          </p>
-          <div className="flex flex-wrap justify-center gap-3">
-            <Link
-              to="/connexion"
-              className="px-6 py-3 bg-white text-primary-800 font-medium rounded-xl hover:opacity-90 active:scale-[0.98] transition"
-            >
-              Se connecter
-            </Link>
-            <Link
-              to="/inscription"
-              className="px-6 py-3 bg-white/15 text-white font-medium rounded-xl hover:bg-white/25 active:scale-[0.98] transition"
-            >
-              Créer un compte
-            </Link>
-          </div>
+
+          {estConnecte ? (
+            <>
+              <h1 className="text-white text-2xl sm:text-4xl font-semibold tracking-tight mb-3">
+                Content de te revoir, {admin.nom}
+              </h1>
+              <p className="text-primary-50 text-sm sm:text-base max-w-xl mx-auto mb-8">
+                Reprends où tu t'étais arrêté, ou déconnecte-toi si ce n'est pas ton appareil.
+              </p>
+              <div className="flex flex-wrap justify-center gap-3">
+                <Link
+                  to="/dashboard"
+                  className="px-6 py-3 bg-white text-primary-800 font-medium rounded-xl hover:opacity-90 active:scale-[0.98] transition"
+                >
+                  Aller au tableau de bord
+                </Link>
+                <button
+                  onClick={deconnexion}
+                  className="flex items-center gap-1.5 px-6 py-3 bg-white/15 text-white font-medium rounded-xl hover:bg-white/25 active:scale-[0.98] transition"
+                >
+                  <LogOut size={16} /> Se déconnecter
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <h1 className="text-white text-2xl sm:text-4xl font-semibold tracking-tight mb-3">
+                La gestion de présence, simplifiée
+              </h1>
+              <p className="text-primary-50 text-sm sm:text-base max-w-xl mx-auto mb-8">
+                Une plateforme pensée pour les écoles et les associations : pointage par QR code, suivi en temps réel, et rapports prêts à l'emploi.
+              </p>
+              <div className="flex flex-wrap justify-center gap-3">
+                <Link
+                  to="/connexion"
+                  className="px-6 py-3 bg-white text-primary-800 font-medium rounded-xl hover:opacity-90 active:scale-[0.98] transition"
+                >
+                  Se connecter
+                </Link>
+                <Link
+                  to="/inscription"
+                  className="px-6 py-3 bg-white/15 text-white font-medium rounded-xl hover:bg-white/25 active:scale-[0.98] transition"
+                >
+                  Créer un compte
+                </Link>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -63,11 +102,13 @@ function Accueil() {
           </div>
         </div>
 
-        <div className="text-center mb-10">
-          <Link to="/espace-membre/connexion" className="inline-flex items-center gap-1.5 text-sm text-primary-600 font-medium hover:underline">
-            Tu es membre d'une organisation ? Accède à ton espace <ArrowRight size={14} />
-          </Link>
-        </div>
+        {!estConnecte && (
+          <div className="text-center mb-10">
+            <Link to="/espace-membre/connexion" className="inline-flex items-center gap-1.5 text-sm text-primary-600 font-medium hover:underline">
+              Tu es membre d'une organisation ? Accède à ton espace <ArrowRight size={14} />
+            </Link>
+          </div>
+        )}
 
         <footer className="border-t border-gray-200 py-8 text-center">
           <div className="flex flex-wrap justify-center gap-4 text-sm text-gray-500">

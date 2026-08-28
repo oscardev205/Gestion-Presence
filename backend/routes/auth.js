@@ -7,10 +7,14 @@ const verifierToken = require('../middleware/auth');
 const router = express.Router();
 
 router.post('/inscription', async (req, res) => {
-  const { nom, email, motDePasse } = req.body;
+  const { nom, email, motDePasse, accepteConditions } = req.body;
 
   if (!nom || !email || !motDePasse) {
     return res.status(400).json({ message: 'Nom, email et mot de passe sont obligatoires' });
+  }
+
+  if (!accepteConditions) {
+    return res.status(400).json({ message: 'Tu dois accepter la politique de confidentialité et les conditions d\'utilisation' });
   }
 
   try {
@@ -22,13 +26,13 @@ router.post('/inscription', async (req, res) => {
     const motDePasseHache = await bcrypt.hash(motDePasse, 10);
 
     const resultat = await pool.query(
-      'INSERT INTO admins (nom, email, mot_de_passe) VALUES ($1, $2, $3) RETURNING id, nom, email',
+      'INSERT INTO admins (nom, email, mot_de_passe, conditions_acceptees_le) VALUES ($1, $2, $3, NOW()) RETURNING id, nom, email',
       [nom, email, motDePasseHache]
     );
 
     const admin = resultat.rows[0];
 
-    const token = jwt.sign({ adminId: admin.id }, process.env.JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({ adminId: admin.id }, process.env.JWT_SECRET, { expiresIn: '1d' });
 
     res.status(201).json({ admin, token });
   } catch (err) {
@@ -38,7 +42,7 @@ router.post('/inscription', async (req, res) => {
 });
 
 router.post('/connexion', async (req, res) => {
-  const { email, motDePasse } = req.body;
+  const { email, motDePasse, resterConnecte } = req.body;
 
   if (!email || !motDePasse) {
     return res.status(400).json({ message: 'Email et mot de passe sont obligatoires' });
@@ -57,7 +61,8 @@ router.post('/connexion', async (req, res) => {
       return res.status(401).json({ message: 'Email ou mot de passe incorrect' });
     }
 
-    const token = jwt.sign({ adminId: admin.id }, process.env.JWT_SECRET, { expiresIn: '7d' });
+    const duree = resterConnecte ? '30d' : '1d';
+    const token = jwt.sign({ adminId: admin.id }, process.env.JWT_SECRET, { expiresIn: duree });
 
     res.json({ admin: { id: admin.id, nom: admin.nom, email: admin.email }, token });
   } catch (err) {

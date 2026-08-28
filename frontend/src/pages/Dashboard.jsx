@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Building2, Users, CalendarClock, History, BarChart3, Settings, ClipboardCheck, ChevronDown, KeyRound } from 'lucide-react';
+import { Building2, Users, CalendarClock, History, BarChart3, Settings, ClipboardCheck, ChevronDown, KeyRound, LogOut } from 'lucide-react';
 import api from '../api';
 
 function Dashboard() {
@@ -11,6 +11,13 @@ function Dashboard() {
   );
   const [chargement, setChargement] = useState(true);
   const navigate = useNavigate();
+
+    const deconnexion = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('admin');
+    localStorage.removeItem('organisationActive');
+    navigate('/connexion');
+  };
 
   useEffect(() => {
     const chargerOrganisations = async () => {
@@ -92,12 +99,21 @@ function Dashboard() {
             </div>
             <h1 className="text-white text-xl sm:text-2xl font-semibold tracking-tight">Bonjour {admin?.nom}</h1>
           </div>
-          <Link
-            to="/mon-compte"
-            className="w-10 h-10 rounded-full bg-white/15 flex items-center justify-center text-white text-sm font-medium shrink-0 hover:bg-white/25 transition"
-          >
-            {initiales}
-          </Link>
+          <div className="flex items-center gap-2 shrink-0">
+            <Link
+              to="/mon-compte"
+              className="w-10 h-10 rounded-full bg-white/15 flex items-center justify-center text-white text-sm font-medium hover:bg-white/25 transition"
+            >
+              {initiales}
+            </Link>
+            <button
+              onClick={deconnexion}
+              className="w-10 h-10 rounded-full bg-white/15 flex items-center justify-center text-white hover:bg-white/25 transition"
+              title="Se déconnecter"
+            >
+              <LogOut size={16} />
+            </button>
+          </div>
         </div>
       </div>
 

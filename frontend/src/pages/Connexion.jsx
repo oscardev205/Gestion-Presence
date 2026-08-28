@@ -7,6 +7,7 @@ function Connexion() {
   const [email, setEmail] = useState('');
   const [motDePasse, setMotDePasse] = useState('');
   const [voirMotDePasse, setVoirMotDePasse] = useState(false);
+    const [resterConnecte, setResterConnecte] = useState(false);
   const [erreur, setErreur] = useState('');
   const navigate = useNavigate();
 
@@ -15,7 +16,7 @@ function Connexion() {
     setErreur('');
 
     try {
-      const reponse = await api.post('/auth/connexion', { email, motDePasse });
+      const reponse = await api.post('/auth/connexion', { email, motDePasse, resterConnecte });
       localStorage.setItem('token', reponse.data.token);
       localStorage.setItem('admin', JSON.stringify(reponse.data.admin));
       navigate('/dashboard');
@@ -73,6 +74,15 @@ function Connexion() {
                 {voirMotDePasse ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
+                        <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={resterConnecte}
+                onChange={(e) => setResterConnecte(e.target.checked)}
+                className="rounded border-gray-300 text-primary-600 focus:ring-primary-400"
+              />
+              Rester connecté
+            </label>
 
             {erreur && (
               <p className="text-sm text-danger-text bg-danger-bg rounded-lg px-3 py-2 anim-apparition">{erreur}</p>

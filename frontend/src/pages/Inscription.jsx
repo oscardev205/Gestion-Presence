@@ -9,14 +9,20 @@ function Inscription() {
   const [motDePasse, setMotDePasse] = useState('');
   const [voirMotDePasse, setVoirMotDePasse] = useState(false);
   const [erreur, setErreur] = useState('');
+    const [accepteConditions, setAccepteConditions] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErreur('');
 
+        if (!accepteConditions) {
+      setErreur('Tu dois accepter la politique de confidentialité et les conditions d\'utilisation');
+      return;
+    }
+
     try {
-      const reponse = await api.post('/auth/inscription', { nom, email, motDePasse });
+      const reponse = await api.post('/auth/inscription', { nom, email, motDePasse, accepteConditions });
       localStorage.setItem('token', reponse.data.token);
       localStorage.setItem('admin', JSON.stringify(reponse.data.admin));
       navigate('/dashboard');
@@ -86,6 +92,27 @@ function Inscription() {
                 {voirMotDePasse ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
+                        <label className="flex items-start gap-2 text-sm text-gray-600 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={accepteConditions}
+                onChange={(e) => setAccepteConditions(e.target.checked)}
+                required
+                className="mt-0.5 rounded border-gray-300 text-primary-600 focus:ring-primary-400"
+              />
+              <span>
+                J'accepte la{' '}
+                <Link to="/politique-confidentialite" target="_blank" className="text-primary-600 hover:underline">
+                  politique de confidentialité
+                </Link>{' '}
+                et les{' '}
+                <Link to="/conditions-utilisation" target="_blank" className="text-primary-600 hover:underline">
+                  conditions d'utilisation
+                </Link>
+              </span>
+            </label>
+
+
 
             {erreur && (
               <p className="text-sm text-danger-text bg-danger-bg rounded-lg px-3 py-2 anim-apparition">{erreur}</p>
