@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Building2, Users, CalendarClock, History, BarChart3, Settings, ClipboardCheck, ChevronDown, KeyRound, LogOut } from 'lucide-react';
+import { Building2, Users, CalendarClock, History, BarChart3, Settings, ClipboardCheck, ChevronDown, KeyRound, LogOut, LineChart } from 'lucide-react';
 import api from '../api';
 
 function Dashboard() {
@@ -84,6 +84,7 @@ function Dashboard() {
     { to: '/seance/nouvelle', label: 'Nouvelle séance', icone: CalendarClock },
     { to: '/historique', label: 'Historique', icone: History },
     { to: '/statistiques', label: 'Statistiques', icone: BarChart3 },
+    { to: '/comparaison', label: 'Comparaison', icone: LineChart },
     { to: '/reglages', label: 'Réglages', icone: Settings },
     { to: '/mon-compte', label: 'Mon compte', icone: KeyRound },
   ];

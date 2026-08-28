@@ -71,4 +71,45 @@ router.patch('/:id/roles-hierarchie', verifierToken, async (req, res) => {
   }
 });
 
+router.get('/comparaison', verifierToken, async (req, res) => {
+  try {
+    const resultat = await pool.query(
+      `SELECT
+        o.id, o.nom, o.type,
+        (SELECT COUNT(*) FROM membres m WHERE m.organisation_id = o.id AND m.statut = 'actif') AS nombre_membres,
+        (SELECT COUNT(*) FROM seances s WHERE s.organisation_id = o.id) AS nombre_seances,
+        (SELECT COUNT(*) FROM presences p
+           JOIN membres m2 ON m2.id = p.membre_id
+           WHERE m2.organisation_id = o.id AND p.statut IN ('present', 'retard')) AS presences_effectives
+       FROM organisations o
+       WHERE o.admin_id = $1
+       ORDER BY o.nom`,
+      [req.adminId]
+    );
+
+    const organisations = resultat.rows.map((o) => {
+      const nombreMembres = Number(o.nombre_membres);
+      const nombreSeances = Number(o.nombre_seances);
+      const presencesEffectives = Number(o.presences_effectives);
+      const tauxMoyen = nombreMembres > 0 && nombreSeances > 0
+        ? Math.round((presencesEffectives / (nombreMembres * nombreSeances)) * 100)
+        : 0;
+
+      return {
+        id: o.id,
+        nom: o.nom,
+        type: o.type,
+        nombreMembres,
+        nombreSeances,
+        tauxMoyen,
+      };
+    });
+
+    res.json(organisations);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Erreur serveur lors de la comparaison' });
+  }
+});
+
 module.exports = router;

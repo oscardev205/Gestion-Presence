@@ -23,6 +23,7 @@ import PolitiqueConfidentialite from './pages/PolitiqueConfidentialite';
 import ConditionsUtilisation from './pages/ConditionsUtilisation';
 import Logo from './components/Logo';
 import MonCompte from './pages/MonCompte';
+import ComparaisonOrganisations from './pages/ComparaisonOrganisations';
 
 function App() {
   return (
@@ -53,6 +54,7 @@ function App() {
         <Route path="/responsable/dashboard" element={<DashboardResponsable />} />
         <Route path="/responsable/membres" element={<MembresResponsable />} />
         <Route path="/responsable/pointage/:seanceId" element={<PointageResponsable />} />
+        <Route path="/comparaison" element={<ComparaisonOrganisations />} />
         <Route path="*" element={<Navigate to="/" />} />
         <Route path="/mon-compte" element={<MonCompte />} />
       </Routes>
