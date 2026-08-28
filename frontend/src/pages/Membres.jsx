@@ -5,6 +5,19 @@ import { Search, Plus, Download, QrCode, UserX, UserCheck, FileDown, ArrowLeft, 
 import api from '../api';
 import BottomNavAdmin from '../components/BottomNavAdmin';
 
+const COULEURS_AVATAR = ['#085041', '#0F6E56', '#1D9E75', '#5DCAA5'];
+
+function couleurAvatar(nom) {
+  const index = nom ? nom.charCodeAt(0) % COULEURS_AVATAR.length : 0;
+  return COULEURS_AVATAR[index];
+}
+
+function initialesDe(nom) {
+  return nom
+    ? nom.split(' ').map((mot) => mot[0]).slice(0, 2).join('').toUpperCase()
+    : '?';
+}
+
 function Membres() {
   const organisationActive = JSON.parse(localStorage.getItem('organisationActive'));
   const [membres, setMembres] = useState([]);
@@ -268,8 +281,8 @@ function Membres() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-gray-50 text-gray-500 text-xs">
+                    <th className="text-left font-medium px-4 py-3">Membre</th>
                     <th className="text-left font-medium px-4 py-3">Identifiant</th>
-                    <th className="text-left font-medium px-4 py-3">Nom</th>
                     <th className="text-left font-medium px-4 py-3">Rôle</th>
                     <th className="text-left font-medium px-4 py-3">Statut</th>
                     <th className="text-left font-medium px-4 py-3">Actions</th>
@@ -281,8 +294,18 @@ function Membres() {
                       key={membre.id}
                       className={`border-t border-gray-100 ${membre.statut === 'suspendu' ? 'opacity-50' : ''}`}
                     >
-                      <td className="px-4 py-3 font-medium text-gray-700">{membre.identifiant}</td>
-                      <td className="px-4 py-3 text-gray-700">{membre.nom}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2.5">
+                          <div
+                            className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-semibold shrink-0"
+                            style={{ backgroundColor: couleurAvatar(membre.nom) }}
+                          >
+                            {initialesDe(membre.nom)}
+                          </div>
+                          <span className="text-gray-700 font-medium">{membre.nom}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-gray-500">{membre.identifiant}</td>
                       <td className="px-4 py-3 text-gray-500">{membre.role || '-'}</td>
                       <td className="px-4 py-3">
                         <span

@@ -81,13 +81,13 @@ function Dashboard() {
   }
 
   const boutons = [
-    { to: '/membres', label: 'Membres', initiales: 'MB' },
-    { to: '/seance/nouvelle', label: 'Nouvelle séance', initiales: 'SÉ' },
-    { to: '/historique', label: 'Historique', initiales: 'HI' },
-    { to: '/statistiques', label: 'Statistiques', initiales: 'ST' },
-    { to: '/comparaison', label: 'Comparaison', initiales: 'CP' },
-    { to: '/reglages', label: 'Réglages', initiales: 'RG' },
-    { to: '/mon-compte', label: 'Mon compte', initiales: 'MC' },
+    { to: '/membres', label: 'Membres', icone: Users },
+    { to: '/seance/nouvelle', label: 'Nouvelle séance', icone: CalendarClock },
+    { to: '/historique', label: 'Historique', icone: History },
+    { to: '/statistiques', label: 'Statistiques', icone: BarChart3 },
+    { to: '/comparaison', label: 'Comparaison', icone: LineChart },
+    { to: '/reglages', label: 'Réglages', icone: Settings },
+    { to: '/mon-compte', label: 'Mon compte', icone: KeyRound },
   ];
 
   return (
@@ -143,14 +143,14 @@ function Dashboard() {
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4">
-          {boutons.map(({ to, label, initiales }) => (
+          {boutons.map(({ to, label, icone: Icone }) => (
             <Link
               key={to}
               to={to}
               className="bg-white rounded-xl border border-gray-100 p-4 flex flex-col items-center gap-2 text-center hover:border-primary-200 hover:shadow-sm active:scale-[0.97] transition"
             >
               <div className="w-9 h-9 bg-primary-50 rounded-lg flex items-center justify-center">
-                <span className="text-xs font-semibold text-primary-700">{initiales}</span>
+                <Icone className="text-primary-600" size={18} />
               </div>
               <span className="text-xs font-medium text-gray-700">{label}</span>
             </Link>
