@@ -235,6 +235,23 @@ function Pointage() {
             </div>
           )}
 
+                    {!seance?.cloturee && membres.length > 0 && (
+            <div className="bg-gray-50 rounded-xl p-4 mb-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-gray-700">Pointage en direct</span>
+                <span className="text-sm font-semibold text-primary-800">
+                  {membres.filter((m) => m.statut).length}/{membres.length}
+                </span>
+              </div>
+              <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-primary-600 transition-all duration-500"
+                  style={{ width: `${membres.length > 0 ? (membres.filter((m) => m.statut).length / membres.length) * 100 : 0}%` }}
+                ></div>
+              </div>
+            </div>
+          )}
+
           {seance?.cloturee ? (
             <div className="w-full flex items-center justify-center gap-2 py-3 bg-gray-100 text-gray-500 font-medium rounded-xl">
               Séance clôturée
