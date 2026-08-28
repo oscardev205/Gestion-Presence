@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import QRCode from 'qrcode';
 import { Search, Plus, Download, QrCode, UserX, UserCheck, FileDown, ArrowLeft, FileStack } from 'lucide-react';
 import api from '../api';
+import BottomNavAdmin from '../components/BottomNavAdmin';
 
 function Membres() {
   const organisationActive = JSON.parse(localStorage.getItem('organisationActive'));
@@ -12,7 +13,7 @@ function Membres() {
   const [recherche, setRecherche] = useState('');
   const [erreur, setErreur] = useState('');
   const [chargement, setChargement] = useState(true);
-    const [classeExport, setClasseExport] = useState('');
+  const [classeExport, setClasseExport] = useState('');
 
   const chargerMembres = async (texteRecherche = '') => {
     try {
@@ -143,6 +144,7 @@ function Membres() {
     lien.click();
     window.URL.revokeObjectURL(url);
   };
+
   const telechargerFichesGroupees = async () => {
     try {
       const reponse = await api.get(`/exports/organisation/${organisationActive.id}/fiches-qr`, {
@@ -169,7 +171,7 @@ function Membres() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-10">
+    <div className="min-h-screen bg-gray-50 pb-20">
       <div className="bg-gradient-to-br from-primary-900 via-primary-800 to-primary-400 px-4 sm:px-6 pt-6 pb-14">
         <div className="max-w-3xl mx-auto">
           <Link to="/dashboard" className="inline-flex items-center gap-1 text-primary-50 text-xs mb-3 hover:text-white transition">
@@ -226,35 +228,35 @@ function Membres() {
 
         <div className="relative mb-4">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                 <input
-          type="text"
-          placeholder="Rechercher par nom ou identifiant"
-          value={recherche}
-          onChange={handleRecherche}
-          className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent transition"
-        />
-      </div>
+          <input
+            type="text"
+            placeholder="Rechercher par nom ou identifiant"
+            value={recherche}
+            onChange={handleRecherche}
+            className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent transition"
+          />
+        </div>
 
-      <div className="flex flex-wrap items-center gap-2 mb-4">
-        {organisationActive.type === 'ecole' && (organisationActive.roles_hierarchie || []).length > 0 && (
-          <select
-            value={classeExport}
-            onChange={(e) => setClasseExport(e.target.value)}
-            className="px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary-400 transition"
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          {organisationActive.type === 'ecole' && (organisationActive.roles_hierarchie || []).length > 0 && (
+            <select
+              value={classeExport}
+              onChange={(e) => setClasseExport(e.target.value)}
+              className="px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary-400 transition"
+            >
+              <option value="">Toutes les classes</option>
+              {organisationActive.roles_hierarchie.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          )}
+          <button
+            onClick={telechargerFichesGroupees}
+            className="flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-50 transition"
           >
-            <option value="">Toutes les classes</option>
-            {organisationActive.roles_hierarchie.map((c) => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
-        )}
-        <button
-          onClick={telechargerFichesGroupees}
-          className="flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-50 transition"
-        >
-          <FileStack size={14} /> Exporter les fiches QR (PDF)
-        </button>
-      </div>
+            <FileStack size={14} /> Exporter les fiches QR (PDF)
+          </button>
+        </div>
 
         {chargement ? (
           <p className="text-sm text-gray-400 text-center py-8">Chargement...</p>
@@ -315,6 +317,8 @@ function Membres() {
           </div>
         )}
       </div>
+
+      <BottomNavAdmin />
     </div>
   );
 }

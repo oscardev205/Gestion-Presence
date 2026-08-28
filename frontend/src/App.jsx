@@ -24,7 +24,9 @@ import ConditionsUtilisation from './pages/ConditionsUtilisation';
 import Logo from './components/Logo';
 import MonCompte from './pages/MonCompte';
 import ComparaisonOrganisations from './pages/ComparaisonOrganisations';
-
+import MembreScanner from './pages/MembreScanner';
+import MembreHistorique from './pages/MembreHistorique';
+import MembreProfil from './pages/MembreProfil';
 function App() {
   return (
     <BrowserRouter>
@@ -57,6 +59,9 @@ function App() {
         <Route path="/comparaison" element={<ComparaisonOrganisations />} />
         <Route path="*" element={<Navigate to="/" />} />
         <Route path="/mon-compte" element={<MonCompte />} />
+        <Route path="/membre/scanner" element={<MembreScanner />} />
+<Route path="/membre/historique" element={<MembreHistorique />} />
+<Route path="/membre/profil" element={<MembreProfil />} />
       </Routes>
     </BrowserRouter>
   );

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Building2, Users, CalendarClock, History, BarChart3, Settings, ClipboardCheck, ChevronDown, KeyRound, LogOut, LineChart } from 'lucide-react';
 import api from '../api';
+import BottomNavAdmin from '../components/BottomNavAdmin';
 
 function Dashboard() {
   const admin = JSON.parse(localStorage.getItem('admin'));
@@ -11,13 +12,6 @@ function Dashboard() {
   );
   const [chargement, setChargement] = useState(true);
   const navigate = useNavigate();
-
-    const deconnexion = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('admin');
-    localStorage.removeItem('organisationActive');
-    navigate('/connexion');
-  };
 
   useEffect(() => {
     const chargerOrganisations = async () => {
@@ -45,6 +39,13 @@ function Dashboard() {
     const org = organisations.find((o) => o.id === Number(e.target.value));
     setOrganisationActive(org);
     localStorage.setItem('organisationActive', JSON.stringify(org));
+  };
+
+  const deconnexion = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('admin');
+    localStorage.removeItem('organisationActive');
+    navigate('/connexion');
   };
 
   const initiales = admin?.nom
@@ -90,7 +91,7 @@ function Dashboard() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-10">
+    <div className="min-h-screen bg-gray-50 pb-20">
       <div className="bg-gradient-to-br from-primary-900 via-primary-800 to-primary-400 px-4 sm:px-6 pt-8 pb-16">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <div>
@@ -163,6 +164,8 @@ function Dashboard() {
           + Créer une autre organisation
         </Link>
       </div>
+
+      <BottomNavAdmin />
     </div>
   );
 }

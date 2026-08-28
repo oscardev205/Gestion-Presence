@@ -46,6 +46,7 @@ router.post('/connexion', async (req, res) => {
         identifiant: membre.identifiant,
         role: membre.role,
         organisationNom: membre.organisation_nom,
+        qrCodeValeur: membre.qr_code_valeur,
       },
     });
   } catch (err) {
@@ -84,6 +85,7 @@ router.post('/connexion-qr', async (req, res) => {
         identifiant: membre.identifiant,
         role: membre.role,
         organisationNom: membre.organisation_nom,
+        qrCodeValeur: membre.qr_code_valeur,
       },
     });
   } catch (err) {

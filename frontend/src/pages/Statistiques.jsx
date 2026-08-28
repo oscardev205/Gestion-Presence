@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, FileDown, FileSpreadsheet, FileText, TrendingUp } from 'lucide-react';
 import api from '../api';
+import BottomNavAdmin from '../components/BottomNavAdmin';
 
 function Statistiques() {
   const organisationActive = JSON.parse(localStorage.getItem('organisationActive'));
   const [donnees, setDonnees] = useState(null);
   const [chargement, setChargement] = useState(true);
-    const [classeFiltre, setClasseFiltre] = useState('');
+  const [classeFiltre, setClasseFiltre] = useState('');
 
   const chargerDonnees = async (classe) => {
     setChargement(true);
@@ -31,7 +32,7 @@ function Statistiques() {
     chargerDonnees(valeur);
   };
 
-   const telechargerExportOrg = async (format) => {
+  const telechargerExportOrg = async (format) => {
     const extensions = { excel: 'xlsx', pdf: 'pdf', word: 'docx' };
     const reponse = await api.get(`/exports/organisation/${organisationActive.id}/${format}`, {
       params: { classe: classeFiltre || undefined },
@@ -62,14 +63,13 @@ function Statistiques() {
   }
 
   const membresTriesParTaux = [...donnees.membres].sort((a, b) => a.tauxPresence - b.tauxPresence);
-
-    const tauxGlobal = membresTriesParTaux.length > 0
+  const tauxGlobal = membresTriesParTaux.length > 0
     ? Math.round(membresTriesParTaux.reduce((somme, m) => somme + m.tauxPresence, 0) / membresTriesParTaux.length)
     : 0;
   const couleurBarre = (taux) => (taux < 50 ? 'bg-danger-text' : taux < 80 ? 'bg-warning-text' : 'bg-success-text');
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-10">
+    <div className="min-h-screen bg-gray-50 pb-20">
       <div className="bg-gradient-to-br from-primary-900 via-primary-800 to-primary-400 px-4 sm:px-6 pt-6 pb-14">
         <div className="max-w-3xl mx-auto">
           <Link to="/dashboard" className="inline-flex items-center gap-1 text-primary-50 text-xs mb-3 hover:text-white transition">
@@ -88,7 +88,7 @@ function Statistiques() {
           <p className="text-3xl font-semibold text-primary-800">{tauxGlobal}%</p>
         </div>
 
-                {organisationActive.type === 'ecole' && (organisationActive.roles_hierarchie || []).length > 0 && (
+        {organisationActive.type === 'ecole' && (organisationActive.roles_hierarchie || []).length > 0 && (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-5 mb-4">
             <label className="text-xs text-gray-500 mb-1.5 block">Filtrer par classe</label>
             <select
@@ -167,11 +167,13 @@ function Statistiques() {
                     {m.permissionnaire} permission{m.permissionnaire > 1 ? 's' : ''} · {donnees.nombreSeances > 0 ? Math.round((m.permissionnaire / donnees.nombreSeances) * 100) : 0}%
                   </span>
                 </div>
-                </Link>
+              </Link>
             ))}
           </div>
         )}
       </div>
+
+      <BottomNavAdmin />
     </div>
   );
 }
