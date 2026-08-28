@@ -3,6 +3,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const pool = require('../db');
 const verifierToken = require('../middleware/auth');
+const limiteurConnexion = require('../middleware/limiteurConnexion');
 
 const router = express.Router();
 
@@ -84,7 +85,7 @@ router.delete('/:id', verifierToken, async (req, res) => {
   }
 });
 
-router.post('/connexion', async (req, res) => {
+router.post('/connexion', limiteurConnexion, async (req, res) => {
   const { email, motDePasse } = req.body;
 
   if (!email || !motDePasse) {

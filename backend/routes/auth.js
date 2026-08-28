@@ -3,6 +3,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const pool = require('../db');
 const verifierToken = require('../middleware/auth');
+const limiteurConnexion = require('../middleware/limiteurConnexion');
 
 const router = express.Router();
 
@@ -41,7 +42,7 @@ router.post('/inscription', async (req, res) => {
   }
 });
 
-router.post('/connexion', async (req, res) => {
+router.post('/connexion', limiteurConnexion, async (req, res) => {
   const { email, motDePasse, resterConnecte } = req.body;
 
   if (!email || !motDePasse) {

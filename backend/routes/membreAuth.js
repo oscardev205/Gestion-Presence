@@ -1,10 +1,11 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const pool = require('../db');
+const limiteurConnexion = require('../middleware/limiteurConnexion');
 
 const router = express.Router();
 
-router.post('/connexion', async (req, res) => {
+router.post('/connexion', limiteurConnexion, async (req, res) => {
   const { identifiant, organisationId } = req.body;
 
   if (!identifiant) {
