@@ -21,12 +21,13 @@ import FAQ from './pages/FAQ';
 import Contact from './pages/Contact';
 import PolitiqueConfidentialite from './pages/PolitiqueConfidentialite';
 import ConditionsUtilisation from './pages/ConditionsUtilisation';
-import Logo from './components/Logo';
 import MonCompte from './pages/MonCompte';
 import ComparaisonOrganisations from './pages/ComparaisonOrganisations';
 import MembreScanner from './pages/MembreScanner';
 import MembreHistorique from './pages/MembreHistorique';
 import MembreProfil from './pages/MembreProfil';
+import Logo from './components/Logo';
+
 function App() {
   return (
     <BrowserRouter>
@@ -49,19 +50,19 @@ function App() {
         <Route path="/pointage/:seanceId" element={<Pointage />} />
         <Route path="/historique" element={<Historique />} />
         <Route path="/statistiques" element={<Statistiques />} />
+        <Route path="/comparaison" element={<ComparaisonOrganisations />} />
         <Route path="/reglages" element={<ReglagesOrganisation />} />
+        <Route path="/mon-compte" element={<MonCompte />} />
         <Route path="/espace-membre/connexion" element={<ConnexionMembre />} />
         <Route path="/mon-espace" element={<EspaceMembre />} />
+        <Route path="/membre/scanner" element={<MembreScanner />} />
+        <Route path="/membre/historique" element={<MembreHistorique />} />
+        <Route path="/membre/profil" element={<MembreProfil />} />
         <Route path="/responsable/connexion" element={<ConnexionResponsable />} />
         <Route path="/responsable/dashboard" element={<DashboardResponsable />} />
         <Route path="/responsable/membres" element={<MembresResponsable />} />
         <Route path="/responsable/pointage/:seanceId" element={<PointageResponsable />} />
-        <Route path="/comparaison" element={<ComparaisonOrganisations />} />
         <Route path="*" element={<Navigate to="/" />} />
-        <Route path="/mon-compte" element={<MonCompte />} />
-        <Route path="/membre/scanner" element={<MembreScanner />} />
-<Route path="/membre/historique" element={<MembreHistorique />} />
-<Route path="/membre/profil" element={<MembreProfil />} />
       </Routes>
     </BrowserRouter>
   );
