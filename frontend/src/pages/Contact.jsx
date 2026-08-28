@@ -3,8 +3,10 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft, Mail, Send } from 'lucide-react';
 
 function Contact() {
-  const [nom, setNom] = useState('');
-  const [email, setEmail] = useState('');
+  const admin = JSON.parse(localStorage.getItem('admin') || 'null');
+
+  const [nom, setNom] = useState(admin?.nom || '');
+  const [email, setEmail] = useState(admin?.email || '');
   const [sujet, setSujet] = useState('');
   const [messageTexte, setMessageTexte] = useState('');
 
