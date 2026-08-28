@@ -1,11 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { LogOut, FileDown, FileSpreadsheet, FileText, CalendarX } from 'lucide-react';
-
-import { useRef } from 'react';
-import { Html5Qrcode } from 'html5-qrcode';
-import { Camera, CameraOff, CheckCircle2, XCircle } from 'lucide-react';
+import { LogOut, FileDown, FileSpreadsheet, FileText, CalendarX, Camera, CameraOff, CheckCircle2, XCircle } from 'lucide-react';
+import ScannerQR from '../components/ScannerQR';
 
 const LABELS_STATUT = { present: 'Présent', retard: 'En retard', absent: 'Absent', permissionnaire: 'Permissionnaire' };
 const STYLES_STATUT = {
@@ -18,12 +15,19 @@ const STYLES_STATUT = {
 function EspaceMembre() {
   const [donnees, setDonnees] = useState(null);
   const [chargement, setChargement] = useState(true);
-    const [scanActif, setScanActif] = useState(false);
+  const [scanActif, setScanActif] = useState(false);
   const [messageScan, setMessageScan] = useState('');
   const [messageScanErreur, setMessageScanErreur] = useState(false);
-  const scannerRef = useRef(null);
-  const traitementEnCours = useRef(false);
+  const scannerApiRef = useRef(null);
   const navigate = useNavigate();
+
+  const rechargerProfil = async () => {
+    const token = localStorage.getItem('tokenMembre');
+    const reponse = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/membre-espace/mon-profil`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    setDonnees(reponse.data);
+  };
 
   useEffect(() => {
     const charger = async () => {
@@ -34,10 +38,7 @@ function EspaceMembre() {
       }
 
       try {
-        const reponse = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/membre-espace/mon-profil`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setDonnees(reponse.data);
+        await rechargerProfil();
       } catch (err) {
         localStorage.removeItem('tokenMembre');
         navigate('/espace-membre/connexion');
@@ -69,60 +70,50 @@ function EspaceMembre() {
     window.URL.revokeObjectURL(url);
   };
 
-    const rechargerProfil = async () => {
+  const gererResultatScan = useCallback(async (texteDecode) => {
     const token = localStorage.getItem('tokenMembre');
-        const reponse = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/membre-espace/mon-profil`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    setDonnees(reponse.data);
-  };
+    try {
+      const reponse = await axios.post(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/presences/auto-scan`,
+        { qrSeanceValeur: texteDecode },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setMessageScan(`Présence enregistrée pour "${reponse.data.seanceTitre}"`);
+      setMessageScanErreur(false);
+      rechargerProfil();
+    } catch (err) {
+      setMessageScan(err.response ? err.response.data.message : 'Erreur de pointage');
+      setMessageScanErreur(true);
+    }
+  }, []);
 
-  const demarrerScan = () => {
+  const demarrerScan = async () => {
     setScanActif(true);
     setMessageScan('');
 
-    const scanner = new Html5Qrcode('lecteur-qr-seance');
-    scannerRef.current = scanner;
-
-    scanner.start(
-      { facingMode: 'environment' },
-      { fps: 10, qrbox: 250 },
-      async (texteDecode) => {
-        if (traitementEnCours.current) return;
-        traitementEnCours.current = true;
-
-        try {
-          const token = localStorage.getItem('tokenMembre');
-          const reponse = await axios.post(
-            'http://localhost:5000/api/presences/auto-scan',
-            { qrSeanceValeur: texteDecode },
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
-          setMessageScan(`Présence enregistrée pour "${reponse.data.seanceTitre}"`);
-          setMessageScanErreur(false);
-          rechargerProfil();
-        } catch (err) {
-          setMessageScan(err.response ? err.response.data.message : 'Erreur de pointage');
-          setMessageScanErreur(true);
-        } finally {
-          setTimeout(() => {
-            traitementEnCours.current = false;
-          }, 2000);
-        }
-      },
-      () => {}
-    );
-  };
-
-  const arreterScan = () => {
-    if (scannerRef.current) {
-      scannerRef.current.stop().then(() => {
-        scannerRef.current.clear();
-        setScanActif(false);
-      });
+    try {
+      await scannerApiRef.current.demarrer();
+    } catch (err) {
+      let messageErreurTechnique;
+      if (err && err.message === 'AUCUNE_CAMERA') {
+        messageErreurTechnique = 'Aucune caméra détectée. Vérifie que l\'autorisation caméra est bien accordée dans les réglages du navigateur.';
+      } else if (err && err.message === 'DEMARRAGE_TROP_LONG') {
+        messageErreurTechnique = 'La caméra met trop de temps à répondre. Réessaie, ou change de navigateur si ça persiste.';
+      } else if (err && err.name === 'NotAllowedError') {
+        messageErreurTechnique = 'Accès à la caméra refusé. Autorise la caméra dans les réglages du navigateur puis réessaie.';
+      } else {
+        messageErreurTechnique = `Erreur caméra : ${err && err.message ? err.message : 'inconnue'}`;
+      }
+      setMessageScan(messageErreurTechnique);
+      setMessageScanErreur(true);
+      setScanActif(false);
     }
   };
 
+  const arreterScan = async () => {
+    await scannerApiRef.current.arreter();
+    setScanActif(false);
+  };
 
   if (chargement) {
     return (
@@ -203,7 +194,8 @@ function EspaceMembre() {
               <FileText size={14} /> Word
             </button>
           </div>
-                    <div className="w-full mt-4 pt-4 border-t border-gray-100">
+
+          <div className="w-full mt-4 pt-4 border-t border-gray-100">
             {!scanActif ? (
               <button
                 onClick={demarrerScan}
@@ -220,7 +212,7 @@ function EspaceMembre() {
               </button>
             )}
 
-            <div id="lecteur-qr-seance" className="mt-4 max-w-xs mx-auto rounded-xl overflow-hidden"></div>
+            <ScannerQR ref={scannerApiRef} elementId="lecteur-qr-membre" onResultat={gererResultatScan} />
 
             {messageScan && (
               <div
