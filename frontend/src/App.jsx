@@ -22,6 +22,7 @@ import Contact from './pages/Contact';
 import PolitiqueConfidentialite from './pages/PolitiqueConfidentialite';
 import ConditionsUtilisation from './pages/ConditionsUtilisation';
 import Logo from './components/Logo';
+import MonCompte from './pages/MonCompte';
 
 function App() {
   return (
@@ -53,6 +54,7 @@ function App() {
         <Route path="/responsable/membres" element={<MembresResponsable />} />
         <Route path="/responsable/pointage/:seanceId" element={<PointageResponsable />} />
         <Route path="*" element={<Navigate to="/" />} />
+        <Route path="/mon-compte" element={<MonCompte />} />
       </Routes>
     </BrowserRouter>
   );

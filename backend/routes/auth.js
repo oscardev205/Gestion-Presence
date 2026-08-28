@@ -65,4 +65,55 @@ router.post('/connexion', async (req, res) => {
   }
 });
 
+router.patch('/mot-de-passe', verifierToken, async (req, res) => {
+  const { ancienMotDePasse, nouveauMotDePasse } = req.body;
+
+  if (!ancienMotDePasse || !nouveauMotDePasse) {
+    return res.status(400).json({ message: 'Ancien et nouveau mot de passe sont obligatoires' });
+  }
+
+  if (nouveauMotDePasse.length < 6) {
+    return res.status(400).json({ message: 'Le nouveau mot de passe doit contenir au moins 6 caractères' });
+  }
+
+  try {
+    const admin = await pool.query('SELECT * FROM admins WHERE id = $1', [req.adminId]);
+    if (admin.rows.length === 0) {
+      return res.status(404).json({ message: 'Compte introuvable' });
+    }
+
+    const motDePasseValide = await bcrypt.compare(ancienMotDePasse, admin.rows[0].mot_de_passe);
+    if (!motDePasseValide) {
+      return res.status(401).json({ message: 'Ancien mot de passe incorrect' });
+    }
+
+    const nouveauMotDePasseHache = await bcrypt.hash(nouveauMotDePasse, 10);
+    await pool.query('UPDATE admins SET mot_de_passe = $1 WHERE id = $2', [nouveauMotDePasseHache, req.adminId]);
+
+    res.json({ message: 'Mot de passe mis à jour' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Erreur serveur lors du changement de mot de passe' });
+  }
+});
+
+router.patch('/profil', verifierToken, async (req, res) => {
+  const { nom } = req.body;
+
+  if (!nom || nom.trim().length === 0) {
+    return res.status(400).json({ message: 'Le nom est obligatoire' });
+  }
+
+  try {
+    const resultat = await pool.query(
+      'UPDATE admins SET nom = $1 WHERE id = $2 RETURNING id, nom, email',
+      [nom.trim(), req.adminId]
+    );
+
+    res.json(resultat.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Erreur serveur lors de la mise à jour du profil' });
+  }
+});
 module.exports = router;

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Building2, Users, CalendarClock, History, BarChart3, Settings, ClipboardCheck, ChevronDown } from 'lucide-react';
+import { Building2, Users, CalendarClock, History, BarChart3, Settings, ClipboardCheck, ChevronDown, KeyRound } from 'lucide-react';
 import api from '../api';
 
 function Dashboard() {
@@ -78,6 +78,7 @@ function Dashboard() {
     { to: '/historique', label: 'Historique', icone: History },
     { to: '/statistiques', label: 'Statistiques', icone: BarChart3 },
     { to: '/reglages', label: 'Réglages', icone: Settings },
+    { to: '/mon-compte', label: 'Mon compte', icone: KeyRound },
   ];
 
   return (
@@ -91,9 +92,12 @@ function Dashboard() {
             </div>
             <h1 className="text-white text-xl sm:text-2xl font-semibold tracking-tight">Bonjour {admin?.nom}</h1>
           </div>
-          <div className="w-10 h-10 rounded-full bg-white/15 flex items-center justify-center text-white text-sm font-medium shrink-0">
+          <Link
+            to="/mon-compte"
+            className="w-10 h-10 rounded-full bg-white/15 flex items-center justify-center text-white text-sm font-medium shrink-0 hover:bg-white/25 transition"
+          >
             {initiales}
-          </div>
+          </Link>
         </div>
       </div>
 
