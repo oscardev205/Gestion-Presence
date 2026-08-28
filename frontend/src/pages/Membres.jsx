@@ -186,7 +186,7 @@ function Membres() {
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
       <div className="bg-gradient-to-br from-primary-900 via-primary-800 to-primary-400 px-4 sm:px-6 pt-6 pb-14">
-        <div className="max-w-3xl mx-auto">
+        <div className="max-w-2xl mx-auto">
           <Link to="/dashboard" className="inline-flex items-center gap-1 text-primary-50 text-xs mb-3 hover:text-white transition">
             <ArrowLeft size={14} /> Retour au dashboard
           </Link>
@@ -195,7 +195,7 @@ function Membres() {
         </div>
       </div>
 
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 -mt-8 anim-apparition">
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 -mt-8 anim-apparition">
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-5 mb-4">
           <form onSubmit={handleAjout} className="flex flex-col sm:flex-row gap-2">
             <input
@@ -276,67 +276,49 @@ function Membres() {
         ) : membres.length === 0 ? (
           <p className="text-sm text-gray-400 text-center py-8">Aucun membre pour l'instant.</p>
         ) : (
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-gray-50 text-gray-500 text-xs">
-                    <th className="text-left font-medium px-4 py-3">Membre</th>
-                    <th className="text-left font-medium px-4 py-3">Identifiant</th>
-                    <th className="text-left font-medium px-4 py-3">Rôle</th>
-                    <th className="text-left font-medium px-4 py-3">Statut</th>
-                    <th className="text-left font-medium px-4 py-3">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {membres.map((membre) => (
-                    <tr
-                      key={membre.id}
-                      className={`border-t border-gray-100 ${membre.statut === 'suspendu' ? 'opacity-50' : ''}`}
-                    >
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2.5">
-                          <div
-                            className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-semibold shrink-0"
-                            style={{ backgroundColor: couleurAvatar(membre.nom) }}
-                          >
-                            {initialesDe(membre.nom)}
-                          </div>
-                          <span className="text-gray-700 font-medium">{membre.nom}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-gray-500">{membre.identifiant}</td>
-                      <td className="px-4 py-3 text-gray-500">{membre.role || '-'}</td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`inline-block text-xs font-medium px-2.5 py-1 rounded-full ${
-                            membre.statut === 'actif' ? 'bg-success-bg text-success-text' : 'bg-danger-bg text-danger-text'
-                          }`}
-                        >
-                          {membre.statut === 'actif' ? 'Actif' : 'Suspendu'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2 text-gray-400">
-                          <button onClick={() => telechargerFiche(membre)} title="Télécharger la fiche" className="hover:text-primary-600 transition">
-                            <Download size={16} />
-                          </button>
-                          <button onClick={() => regenererQr(membre)} title="Régénérer le QR" className="hover:text-primary-600 transition">
-                            <QrCode size={16} />
-                          </button>
-                          <button onClick={() => changerStatut(membre)} title={membre.statut === 'actif' ? 'Suspendre' : 'Réactiver'} className="hover:text-primary-600 transition">
-                            {membre.statut === 'actif' ? <UserX size={16} /> : <UserCheck size={16} />}
-                          </button>
-                          <button onClick={() => telechargerHistoriqueMembre(membre, 'pdf')} title="Historique PDF" className="hover:text-primary-600 transition">
-                            <FileDown size={16} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+          <div className="space-y-3">
+            {membres.map((membre) => (
+              <div
+                key={membre.id}
+                className={`bg-white rounded-2xl shadow-sm border border-gray-100 p-4 ${membre.statut === 'suspendu' ? 'opacity-60' : ''}`}
+              >
+                <div className="flex items-center gap-3 mb-3">
+                  <div
+                    className="w-11 h-11 rounded-full flex items-center justify-center text-white text-sm font-semibold shrink-0"
+                    style={{ backgroundColor: couleurAvatar(membre.nom) }}
+                  >
+                    {initialesDe(membre.nom)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-800 truncate">{membre.nom}</p>
+                    <p className="text-xs text-gray-400">{membre.identifiant}{membre.role ? ` · ${membre.role}` : ''}</p>
+                  </div>
+                  <span
+                    className={`text-xs font-medium px-2.5 py-1 rounded-full shrink-0 ${
+                      membre.statut === 'actif' ? 'bg-success-bg text-success-text' : 'bg-danger-bg text-danger-text'
+                    }`}
+                  >
+                    {membre.statut === 'actif' ? 'Actif' : 'Suspendu'}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-4 pt-3 border-t border-gray-100 text-gray-400">
+                  <button onClick={() => telechargerFiche(membre)} title="Télécharger la fiche" className="flex items-center gap-1.5 text-xs hover:text-primary-600 transition">
+                    <Download size={15} /> Fiche
+                  </button>
+                  <button onClick={() => regenererQr(membre)} title="Régénérer le QR" className="flex items-center gap-1.5 text-xs hover:text-primary-600 transition">
+                    <QrCode size={15} /> QR
+                  </button>
+                  <button onClick={() => changerStatut(membre)} title={membre.statut === 'actif' ? 'Suspendre' : 'Réactiver'} className="flex items-center gap-1.5 text-xs hover:text-primary-600 transition">
+                    {membre.statut === 'actif' ? <UserX size={15} /> : <UserCheck size={15} />}
+                    {membre.statut === 'actif' ? 'Suspendre' : 'Réactiver'}
+                  </button>
+                  <button onClick={() => telechargerHistoriqueMembre(membre, 'pdf')} title="Historique PDF" className="flex items-center gap-1.5 text-xs hover:text-primary-600 transition">
+                    <FileDown size={15} /> PDF
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
