@@ -7,11 +7,18 @@ const limiteurConnexion = require('../middleware/limiteurConnexion');
 
 const router = express.Router();
 
+function emailValide(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
 router.post('/creer', verifierToken, async (req, res) => {
   const { organisationId, nom, email, motDePasse } = req.body;
 
   if (!organisationId || !nom || !email || !motDePasse) {
     return res.status(400).json({ message: 'Tous les champs sont obligatoires' });
+  }
+    if (!emailValide(email)) {
+    return res.status(400).json({ message: 'Adresse email invalide' });
   }
 
   try {

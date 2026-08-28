@@ -7,11 +7,26 @@ const limiteurConnexion = require('../middleware/limiteurConnexion');
 
 const router = express.Router();
 
+function emailValide(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
 router.post('/inscription', async (req, res) => {
   const { nom, email, motDePasse, accepteConditions } = req.body;
 
   if (!nom || !email || !motDePasse) {
     return res.status(400).json({ message: 'Nom, email et mot de passe sont obligatoires' });
+  }
+    if (!emailValide(email)) {
+    return res.status(400).json({ message: 'Adresse email invalide' });
+  }
+
+  if (motDePasse.length < 6) {
+    return res.status(400).json({ message: 'Le mot de passe doit contenir au moins 6 caractères' });
+  }
+
+  if (nom.trim().length < 2) {
+    return res.status(400).json({ message: 'Le nom doit contenir au moins 2 caractères' });
   }
 
   if (!accepteConditions) {

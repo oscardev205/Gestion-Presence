@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const http = require('http');
+const helmet = require('helmet');
 const { Server } = require('socket.io');
 const pool = require('./db');
 const authRoutes = require('./routes/auth');
@@ -46,6 +47,9 @@ app.use(cors({
     }
   },
   credentials: true,
+}));
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
 app.use(express.json());
 

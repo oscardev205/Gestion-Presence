@@ -1,7 +1,6 @@
 const express = require('express');
 const ExcelJS = require('exceljs');
-const chromiumModule = require('@sparticuz/chromium');
-const chromium = chromiumModule.default || chromiumModule;
+const chromium = require('@sparticuz/chromium');
 const puppeteer = require('puppeteer-core');
 const QRCode = require('qrcode');
 const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, HeadingLevel, WidthType, AlignmentType } = require('docx');
@@ -14,6 +13,16 @@ const router = express.Router();
 
 const LABELS = { present: 'Présent', retard: 'En retard', absent: 'Absent', permissionnaire: 'Permissionnaire' };
 const MOT_DE_PASSE_PROTECTION = 'gestion-presence-verrouille';
+
+function echapperHtml(texte) {
+  if (texte === null || texte === undefined) return '';
+  return String(texte)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 
 async function lancerNavigateur() {
   if (process.env.CHROME_PATH) {
@@ -210,9 +219,9 @@ function genererHtmlSeance(donnees) {
 
   const ligneHtml = (m) => `
     <tr style="background:${couleursFond[m.statut]}">
-      <td>${m.identifiant}</td>
-      <td>${m.nom}</td>
-      <td>${m.role || '-'}</td>
+      <td>${echapperHtml(m.identifiant)}</td>
+      <td>${echapperHtml(m.nom)}</td>
+      <td>${echapperHtml(m.role) || '-'}</td>
       <td style="color:${couleursTexte[m.statut]};font-weight:bold;text-align:center">${LABELS[m.statut]}</td>
       <td style="text-align:center">${m.heure_pointage ? new Date(m.heure_pointage).toLocaleTimeString('fr-FR') : '-'}</td>
     </tr>
@@ -231,7 +240,7 @@ function genererHtmlSeance(donnees) {
     });
 
     corpsTableau = Object.entries(groupes).map(([nomGroupe, membresGroupe]) => `
-      <tr><td colspan="5" style="background:#0f6e56;color:#ffffff;font-weight:bold;padding:8px 10px">${nomGroupe}</td></tr>
+      <tr><td colspan="5" style="background:#0f6e56;color:#ffffff;font-weight:bold;padding:8px 10px">${echapperHtml(nomGroupe)}</td></tr>
       ${membresGroupe.map(ligneHtml).join('')}
     `).join('');
   } else {
@@ -256,8 +265,8 @@ function genererHtmlSeance(donnees) {
     </style></head>
     <body>
       <div class="bandeau">
-        <h1>${donnees.seance.organisation_nom}</h1>
-        <p>${donnees.seance.titre} — ${new Date(donnees.seance.date_seance).toLocaleString('fr-FR')}</p>
+        <h1>${echapperHtml(donnees.seance.organisation_nom)}</h1>
+        <p>${echapperHtml(donnees.seance.titre)} — ${new Date(donnees.seance.date_seance).toLocaleString('fr-FR')}</p>
       </div>
       <div class="contenu">
         <table>
@@ -282,9 +291,9 @@ function genererHtmlSeance(donnees) {
 function genererHtmlOrganisation(donnees) {
   const ligneHtml = (m) => `
     <tr>
-      <td>${m.identifiant}</td>
-      <td>${m.nom}</td>
-      <td>${m.role || '-'}</td>
+      <td>${echapperHtml(m.identifiant)}</td>
+      <td>${echapperHtml(m.nom)}</td>
+      <td>${echapperHtml(m.role) || '-'}</td>
       <td style="color:#2e7d32">${m.present}</td>
       <td style="color:#e65100">${m.retard}</td>
       <td style="color:#c62828">${m.absent}</td>
@@ -306,7 +315,7 @@ function genererHtmlOrganisation(donnees) {
     });
 
     corpsTableau = Object.entries(groupes).map(([nomGroupe, membresGroupe]) => `
-      <tr><td colspan="8" style="background:#0f6e56;color:#ffffff;font-weight:bold;padding:8px 10px">${nomGroupe}</td></tr>
+      <tr><td colspan="8" style="background:#0f6e56;color:#ffffff;font-weight:bold;padding:8px 10px">${echapperHtml(nomGroupe)}</td></tr>
       ${membresGroupe.map(ligneHtml).join('')}
     `).join('');
   } else {
@@ -327,8 +336,8 @@ function genererHtmlOrganisation(donnees) {
     </style></head>
     <body>
       <div class="bandeau">
-        <h1>${donnees.organisation.nom}</h1>
-        <p>Vue d'ensemble${donnees.classe ? ` — Classe ${donnees.classe}` : ''} — ${donnees.nombreSeances} séance(s) enregistrée(s)</p>
+        <h1>${echapperHtml(donnees.organisation.nom)}</h1>
+        <p>Vue d'ensemble${donnees.classe ? ` — Classe ${echapperHtml(donnees.classe)}` : ''} — ${donnees.nombreSeances} séance(s) enregistrée(s)</p>
       </div>
       <div class="contenu">
         <table>
@@ -344,7 +353,7 @@ function genererHtmlOrganisation(donnees) {
 function genererHtmlMembre(donnees) {
   const lignes = donnees.historique.map((h) => `
     <tr>
-      <td>${h.titre}</td>
+      <td>${echapperHtml(h.titre)}</td>
       <td>${new Date(h.date_seance).toLocaleString('fr-FR')}</td>
       <td style="color:${{ present: '#2e7d32', retard: '#e65100', absent: '#c62828', permissionnaire: '#1565c0' }[h.statut]};font-weight:bold">${LABELS[h.statut]}</td>
       <td style="text-align:center">${h.heure_pointage ? new Date(h.heure_pointage).toLocaleTimeString('fr-FR') : '-'}</td>
@@ -368,8 +377,8 @@ function genererHtmlMembre(donnees) {
     </style></head>
     <body>
       <div class="bandeau">
-        <h1>${donnees.membre.nom} (${donnees.membre.identifiant})</h1>
-        <p>${donnees.membre.organisation_nom}${donnees.membre.role ? ' — ' + donnees.membre.role : ''}</p>
+        <h1>${echapperHtml(donnees.membre.nom)} (${echapperHtml(donnees.membre.identifiant)})</h1>
+        <p>${echapperHtml(donnees.membre.organisation_nom)}${donnees.membre.role ? ' — ' + echapperHtml(donnees.membre.role) : ''}</p>
       </div>
       <div class="contenu">
         <div class="recap">
@@ -1018,11 +1027,11 @@ router.get('/organisation/:id/fiches-qr', verifierToken, async (req, res) => {
         const qrDataUrl = await QRCode.toDataURL(m.qr_code_valeur, { width: 200, margin: 1 });
         return `
           <div class="carte">
-            <p class="org">${donnees.organisation.nom}</p>
+            <p class="org">${echapperHtml(donnees.organisation.nom)}</p>
             <img src="${qrDataUrl}" alt="QR" />
-            <p class="identifiant">${m.identifiant}</p>
-            <p class="nom">${m.nom}</p>
-            ${m.role ? `<p class="role">${m.role}</p>` : ''}
+            <p class="identifiant">${echapperHtml(m.identifiant)}</p>
+            <p class="nom">${echapperHtml(m.nom)}</p>
+            ${m.role ? `<p class="role">${echapperHtml(m.role)}</p>` : ''}
           </div>
         `;
       })
