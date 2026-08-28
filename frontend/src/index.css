@@ -43,3 +43,33 @@ body {
 .anim-pulse {
   animation: pulse-douce 1.4s ease-in-out infinite;
 }
+
+@keyframes tracerLogo {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+
+.logo-trait {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: tracerLogo 0.9s ease-out forwards;
+}
+
+.logo-trait-1 { animation-delay: 0.1s; }
+.logo-trait-2 { animation-delay: 0.5s; }
+.logo-trait-3 { animation-delay: 0.65s; }
+
+@keyframes apparitionDouce {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.logo-fond {
+  animation: apparitionDouce 0.4s ease-out forwards;
+}
+
+.logo-pixels {
+  opacity: 0;
+  animation: apparitionDouce 0.4s ease-out forwards;
+  animation-delay: 1.1s;
+}
