@@ -35,11 +35,12 @@ router.post('/', verifierToken, async (req, res) => {
     const prochainNumero = Number(compte.rows[0].count) + 1;
     const identifiant = `${organisation.sigle}-${prochainNumero}`;
     const qrCodeValeur = crypto.randomUUID();
+        const codePin = String(Math.floor(1000 + Math.random() * 9000));
 
     const resultat = await pool.query(
-      `INSERT INTO membres (organisation_id, nom, role, identifiant, qr_code_valeur)
-       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-      [organisationId, nom, role || null, identifiant, qrCodeValeur]
+      `INSERT INTO membres (organisation_id, nom, role, identifiant, qr_code_valeur, code_pin)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [organisationId, nom, role || null, identifiant, qrCodeValeur, codePin]
     );
 
     res.status(201).json(resultat.rows[0]);

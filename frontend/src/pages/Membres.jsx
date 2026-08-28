@@ -89,6 +89,12 @@ function Membres() {
       ctx.fillStyle = '#444444';
       ctx.fillText(membre.nom, canvas.width / 2, 440);
 
+      if (membre.code_pin) {
+        ctx.font = 'bold 15px Arial';
+        ctx.fillStyle = '#085041';
+        ctx.fillText(`Code PIN : ${membre.code_pin}`, canvas.width / 2, 465);
+      }
+
       const lien = document.createElement('a');
       lien.download = `${membre.identifiant}.png`;
       lien.href = canvas.toDataURL('image/png');
