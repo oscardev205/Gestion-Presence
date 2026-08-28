@@ -55,39 +55,61 @@ function PointageResponsable() {
     };
   }, [seanceId]);
 
-  const demarrerScan = () => {
+    const demarrerScan = async () => {
     setScanActif(true);
     setMessage('');
 
-    const scanner = new Html5Qrcode('lecteur-qr-responsable');
-    scannerRef.current = scanner;
+    try {
+      const cameras = await Html5Qrcode.getCameras();
 
-    scanner.start(
-      { facingMode: 'environment' },
-      { fps: 10, qrbox: 250 },
-      async (texteDecode) => {
-        if (traitementEnCours.current) return;
-        traitementEnCours.current = true;
+      if (!cameras || cameras.length === 0) {
+        setMessage('Aucune caméra détectée sur cet appareil');
+        setMessageErreur(true);
+        setScanActif(false);
+        return;
+      }
 
-        try {
-          const reponse = await apiResponsable.post('/presences/scan', {
-            seanceId: Number(seanceId),
-            qrCodeValeur: texteDecode,
-          });
-          setMessage(`${reponse.data.membre.nom} pointé (${LABELS_STATUT[reponse.data.presence.statut]})`);
-          setMessageErreur(false);
-          chargerListe();
-        } catch (err) {
-          setMessage(err.response ? err.response.data.message : 'Erreur de pointage');
-          setMessageErreur(true);
-        } finally {
-          setTimeout(() => {
-            traitementEnCours.current = false;
-          }, 2000);
-        }
-      },
-      () => {}
-    );
+      const camerasArriere = cameras.filter((c) => /back|rear|environment|arrière/i.test(c.label));
+      const camera = camerasArriere.length > 0 ? camerasArriere[camerasArriere.length - 1] : cameras[cameras.length - 1];
+
+      const scanner = new Html5Qrcode('lecteur-qr');
+      scannerRef.current = scanner;
+
+      await scanner.start(
+        camera.id,
+        { fps: 10, qrbox: 250 },
+        async (texteDecode) => {
+          if (traitementEnCours.current) return;
+          traitementEnCours.current = true;
+
+          try {
+            const reponse = await api.post('/presences/scan', {
+              seanceId: Number(seanceId),
+              qrCodeValeur: texteDecode,
+            });
+            setMessage(`${reponse.data.membre.nom} pointé (${LABELS_STATUT[reponse.data.presence.statut]})`);
+            setMessageErreur(false);
+            chargerListe();
+          } catch (err) {
+            if (err.response) {
+              setMessage(err.response.data.message);
+            } else {
+              setMessage('Erreur de pointage');
+            }
+            setMessageErreur(true);
+          } finally {
+            setTimeout(() => {
+              traitementEnCours.current = false;
+            }, 2000);
+          }
+        },
+        () => {}
+      );
+    } catch (err) {
+      setMessage('Impossible d\'accéder à la caméra, vérifie les autorisations');
+      setMessageErreur(true);
+      setScanActif(false);
+    }
   };
 
   const arreterScan = () => {
@@ -198,7 +220,7 @@ function PointageResponsable() {
                       <select
                         value={m.statut || ''}
                         onChange={(e) => pointerManuellement(m.membre_id, e.target.value)}
-                        disabled={seance?.cloturee}
+                        disabled={seance?.cloturee || !!m.statut}
                         className="text-xs bg-gray-50 border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary-400 transition disabled:opacity-50"
                       >
                         <option value="" disabled>Choisir</option>

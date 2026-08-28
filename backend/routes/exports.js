@@ -1,18 +1,33 @@
 const express = require('express');
 const ExcelJS = require('exceljs');
-const puppeteer = require('puppeteer');
+const chromium = require('@sparticuz/chromium');
+const puppeteer = require('puppeteer-core');
+const QRCode = require('qrcode');
 const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, HeadingLevel, WidthType, AlignmentType } = require('docx');
 const pool = require('../db');
 const verifierToken = require('../middleware/auth');
 const verifierTokenMembre = require('../middleware/authMembre');
 const trierMembres = require('../utils/trierMembres');
-const QRCode = require('qrcode');
 
 const router = express.Router();
 
 const LABELS = { present: 'Présent', retard: 'En retard', absent: 'Absent', permissionnaire: 'Permissionnaire' };
-const CHEMIN_CHROME = process.env.CHROME_PATH || undefined;
 const MOT_DE_PASSE_PROTECTION = 'gestion-presence-verrouille';
+
+async function lancerNavigateur() {
+  if (process.env.CHROME_PATH) {
+    return puppeteer.launch({
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      executablePath: process.env.CHROME_PATH,
+    });
+  }
+
+  return puppeteer.launch({
+    args: chromium.args,
+    executablePath: await chromium.executablePath(),
+    headless: chromium.headless,
+  });
+}
 
 async function recupererDonneesSeance(seanceId, adminId) {
   const seanceResultat = await pool.query(
@@ -98,30 +113,6 @@ async function recupererDonneesOrganisation(organisationId, adminId, classe) {
   return { organisation, nombreSeances, membres, classe: classe || null, libelleRole };
 }
 
-async function recupererMembresPourFichesQr(organisationId, adminId, classe) {
-  const orgResultat = await pool.query(
-    'SELECT * FROM organisations WHERE id = $1 AND admin_id = $2',
-    [organisationId, adminId]
-  );
-  if (orgResultat.rows.length === 0) return null;
-  const organisation = orgResultat.rows[0];
-
-  let requete = `SELECT id, nom, identifiant, role, qr_code_valeur FROM membres WHERE organisation_id = $1 AND statut = 'actif'`;
-  const params = [organisationId];
-
-  if (classe) {
-    requete += ' AND role = $2';
-    params.push(classe);
-  }
-
-  requete += ' ORDER BY nom';
-
-  const membresResultat = await pool.query(requete, params);
-  const membres = trierMembres(membresResultat.rows, organisation);
-
-  return { organisation, membres, classe: classe || null };
-}
-
 async function recupererDonneesMembre(membreId, adminId) {
   const membreResultat = await pool.query(
     `SELECT m.*, o.nom AS organisation_nom FROM membres m
@@ -186,6 +177,30 @@ async function recupererDonneesMembrePourLuiMeme(membreId) {
   const tauxPresence = nombreSeances > 0 ? Math.round(((recap.present + recap.retard) / nombreSeances) * 100) : 0;
 
   return { membre, nombreSeances, historique: historiqueResultat.rows, recap, tauxPresence };
+}
+
+async function recupererMembresPourFichesQr(organisationId, adminId, classe) {
+  const orgResultat = await pool.query(
+    'SELECT * FROM organisations WHERE id = $1 AND admin_id = $2',
+    [organisationId, adminId]
+  );
+  if (orgResultat.rows.length === 0) return null;
+  const organisation = orgResultat.rows[0];
+
+  let requete = `SELECT id, nom, identifiant, role, qr_code_valeur FROM membres WHERE organisation_id = $1 AND statut = 'actif'`;
+  const params = [organisationId];
+
+  if (classe) {
+    requete += ' AND role = $2';
+    params.push(classe);
+  }
+
+  requete += ' ORDER BY nom';
+
+  const membresResultat = await pool.query(requete, params);
+  const membres = trierMembres(membresResultat.rows, organisation);
+
+  return { organisation, membres, classe: classe || null };
 }
 
 function genererHtmlSeance(donnees) {
@@ -475,10 +490,11 @@ router.get('/seance/:id/excel', verifierToken, async (req, res) => {
 
     await feuille.protect(MOT_DE_PASSE_PROTECTION, { selectLockedCells: true, selectUnlockedCells: true });
 
+    const bufferExcel = await workbook.xlsx.writeBuffer();
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename=presence_${donnees.seance.titre}.xlsx`);
-    await workbook.xlsx.write(res);
-    res.end();
+    res.setHeader('Content-Length', bufferExcel.length);
+    res.send(bufferExcel);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Erreur lors de la génération du fichier Excel' });
@@ -491,10 +507,7 @@ router.get('/seance/:id/pdf', verifierToken, async (req, res) => {
     const donnees = await recupererDonneesSeance(req.params.id, req.adminId);
     if (!donnees) return res.status(404).json({ message: 'Séance introuvable' });
 
-    navigateur = await puppeteer.launch({
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-      executablePath: CHEMIN_CHROME,
-    });
+    navigateur = await lancerNavigateur();
     const page = await navigateur.newPage();
     await page.setContent(genererHtmlSeance(donnees), { waitUntil: 'networkidle0' });
     const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true });
@@ -661,10 +674,11 @@ router.get('/organisation/:id/excel', verifierToken, async (req, res) => {
 
     await feuille.protect(MOT_DE_PASSE_PROTECTION, { selectLockedCells: true, selectUnlockedCells: true });
 
+    const bufferExcel = await workbook.xlsx.writeBuffer();
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename=vue_ensemble_${donnees.organisation.nom}.xlsx`);
-    await workbook.xlsx.write(res);
-    res.end();
+    res.setHeader('Content-Length', bufferExcel.length);
+    res.send(bufferExcel);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Erreur lors de la génération du fichier Excel' });
@@ -677,10 +691,7 @@ router.get('/organisation/:id/pdf', verifierToken, async (req, res) => {
     const donnees = await recupererDonneesOrganisation(req.params.id, req.adminId, req.query.classe);
     if (!donnees) return res.status(404).json({ message: 'Organisation introuvable' });
 
-    navigateur = await puppeteer.launch({
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-      executablePath: CHEMIN_CHROME,
-    });
+    navigateur = await lancerNavigateur();
     const page = await navigateur.newPage();
     await page.setContent(genererHtmlOrganisation(donnees), { waitUntil: 'networkidle0' });
     const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true });
@@ -797,10 +808,11 @@ router.get('/membre/:id/excel', verifierToken, async (req, res) => {
 
     await feuille.protect(MOT_DE_PASSE_PROTECTION, { selectLockedCells: true, selectUnlockedCells: true });
 
+    const bufferExcel = await workbook.xlsx.writeBuffer();
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename=historique_${donnees.membre.identifiant}.xlsx`);
-    await workbook.xlsx.write(res);
-    res.end();
+    res.setHeader('Content-Length', bufferExcel.length);
+    res.send(bufferExcel);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Erreur lors de la génération du fichier Excel' });
@@ -813,10 +825,7 @@ router.get('/membre/:id/pdf', verifierToken, async (req, res) => {
     const donnees = await recupererDonneesMembre(req.params.id, req.adminId);
     if (!donnees) return res.status(404).json({ message: 'Membre introuvable' });
 
-    navigateur = await puppeteer.launch({
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-      executablePath: CHEMIN_CHROME,
-    });
+    navigateur = await lancerNavigateur();
     const page = await navigateur.newPage();
     await page.setContent(genererHtmlMembre(donnees), { waitUntil: 'networkidle0' });
     const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true });
@@ -914,10 +923,11 @@ router.get('/mon-historique/excel', verifierTokenMembre, async (req, res) => {
 
     await feuille.protect(MOT_DE_PASSE_PROTECTION, { selectLockedCells: true, selectUnlockedCells: true });
 
+    const bufferExcel = await workbook.xlsx.writeBuffer();
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename=mon_historique.xlsx`);
-    await workbook.xlsx.write(res);
-    res.end();
+    res.setHeader('Content-Length', bufferExcel.length);
+    res.send(bufferExcel);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Erreur lors de la génération du fichier Excel' });
@@ -930,10 +940,7 @@ router.get('/mon-historique/pdf', verifierTokenMembre, async (req, res) => {
     const donnees = await recupererDonneesMembrePourLuiMeme(req.membreId);
     if (!donnees) return res.status(404).json({ message: 'Membre introuvable' });
 
-    navigateur = await puppeteer.launch({
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-      executablePath: CHEMIN_CHROME,
-    });
+    navigateur = await lancerNavigateur();
     const page = await navigateur.newPage();
     await page.setContent(genererHtmlMembre(donnees), { waitUntil: 'networkidle0' });
     const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true });
@@ -1041,10 +1048,7 @@ router.get('/organisation/:id/fiches-qr', verifierToken, async (req, res) => {
       </html>
     `;
 
-    navigateur = await puppeteer.launch({
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-      executablePath: CHEMIN_CHROME,
-    });
+    navigateur = await lancerNavigateur();
     const page = await navigateur.newPage();
     await page.setContent(html, { waitUntil: 'networkidle0' });
     const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true, margin: { top: '15mm', bottom: '15mm', left: '10mm', right: '10mm' } });
