@@ -55,7 +55,7 @@ function PointageResponsable() {
     };
   }, [seanceId]);
 
-    const demarrerScan = async () => {
+  const demarrerScan = async () => {
     setScanActif(true);
     setMessage('');
 
@@ -72,7 +72,7 @@ function PointageResponsable() {
       const camerasArriere = cameras.filter((c) => /back|rear|environment|arrière/i.test(c.label));
       const camera = camerasArriere.length > 0 ? camerasArriere[camerasArriere.length - 1] : cameras[cameras.length - 1];
 
-      const scanner = new Html5Qrcode('lecteur-qr');
+      const scanner = new Html5Qrcode('lecteur-qr-responsable');
       scannerRef.current = scanner;
 
       await scanner.start(
@@ -83,7 +83,7 @@ function PointageResponsable() {
           traitementEnCours.current = true;
 
           try {
-            const reponse = await api.post('/presences/scan', {
+            const reponse = await apiResponsable.post('/presences/scan', {
               seanceId: Number(seanceId),
               qrCodeValeur: texteDecode,
             });
