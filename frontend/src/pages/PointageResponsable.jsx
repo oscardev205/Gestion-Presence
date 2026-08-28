@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Html5Qrcode } from 'html5-qrcode';
 import QRCode from 'qrcode';
 import { Camera, CameraOff, ArrowLeft, CheckCircle2, XCircle, QrCode } from 'lucide-react';
 import apiResponsable from '../apiResponsable';
 import socket from '../socket';
+import ScannerQR from '../components/ScannerQR';
 
 const LABELS_STATUT = { present: 'Présent', retard: 'En retard', absent: 'Absent', permissionnaire: 'Permissionnaire' };
 const STYLES_STATUT = {
@@ -14,13 +14,6 @@ const STYLES_STATUT = {
   permissionnaire: 'bg-info-bg text-info-text',
 };
 
-function demarrageAvecDelai(promesse, delaiMs) {
-  return Promise.race([
-    promesse,
-    new Promise((_, reject) => setTimeout(() => reject(new Error('DEMARRAGE_TROP_LONG')), delaiMs)),
-  ]);
-}
-
 function PointageResponsable() {
   const { seanceId } = useParams();
   const [membres, setMembres] = useState([]);
@@ -29,8 +22,7 @@ function PointageResponsable() {
   const [messageErreur, setMessageErreur] = useState(false);
   const [qrSeanceDataUrl, setQrSeanceDataUrl] = useState('');
   const [seance, setSeance] = useState(null);
-  const scannerRef = useRef(null);
-  const traitementEnCours = useRef(false);
+  const scannerApiRef = useRef(null);
 
   const chargerListe = async () => {
     const reponse = await apiResponsable.get(`/presences/seance/${seanceId}`);
@@ -62,107 +54,54 @@ function PointageResponsable() {
     };
   }, [seanceId]);
 
+  const gererResultatScan = useCallback(
+    async (texteDecode) => {
+      try {
+        const reponse = await apiResponsable.post('/presences/scan', {
+          seanceId: Number(seanceId),
+          qrCodeValeur: texteDecode,
+        });
+        setMessage(`${reponse.data.membre.nom} pointé (${LABELS_STATUT[reponse.data.presence.statut]})`);
+        setMessageErreur(false);
+        chargerListe();
+      } catch (err) {
+        if (err.response) {
+          setMessage(err.response.data.message);
+        } else {
+          setMessage('Erreur de pointage');
+        }
+        setMessageErreur(true);
+      }
+    },
+    [seanceId]
+  );
+
   const demarrerScan = async () => {
     setScanActif(true);
     setMessage('');
 
-    if (scannerRef.current) {
-      try {
-        await scannerRef.current.stop();
-        scannerRef.current.clear();
-      } catch (err) {
-        // rien à faire, il n'y avait peut-être rien à arrêter
-      }
-      scannerRef.current = null;
-    }
-
     try {
-      let cameras = await Html5Qrcode.getCameras();
-
-      if (!cameras || cameras.length === 0) {
-        await new Promise((resolve) => setTimeout(resolve, 800));
-        cameras = await Html5Qrcode.getCameras();
-      }
-
-      if (!cameras || cameras.length === 0) {
-        setMessage('Aucune caméra détectée. Vérifie que l\'autorisation caméra est bien accordée dans les réglages du navigateur.');
-        setMessageErreur(true);
-        setScanActif(false);
-        return;
-      }
-
-      const camerasArriere = cameras.filter((c) => /back|rear|environment|arrière/i.test(c.label));
-      const camera = camerasArriere.length > 0 ? camerasArriere[camerasArriere.length - 1] : cameras[cameras.length - 1];
-
-      const scanner = new Html5Qrcode('lecteur-qr-responsable');
-      scannerRef.current = scanner;
-
-      await demarrageAvecDelai(
-        scanner.start(
-          camera.id,
-          { fps: 10, qrbox: 250 },
-          async (texteDecode) => {
-            if (traitementEnCours.current) return;
-            traitementEnCours.current = true;
-
-            try {
-              const reponse = await apiResponsable.post('/presences/scan', {
-                seanceId: Number(seanceId),
-                qrCodeValeur: texteDecode,
-              });
-              setMessage(`${reponse.data.membre.nom} pointé (${LABELS_STATUT[reponse.data.presence.statut]})`);
-              setMessageErreur(false);
-              chargerListe();
-            } catch (err) {
-              if (err.response) {
-                setMessage(err.response.data.message);
-              } else {
-                setMessage('Erreur de pointage');
-              }
-              setMessageErreur(true);
-            } finally {
-              setTimeout(() => {
-                traitementEnCours.current = false;
-              }, 2000);
-            }
-          },
-          () => {}
-        ),
-        8000
-      );
+      await scannerApiRef.current.demarrer();
     } catch (err) {
-      if (scannerRef.current) {
-        try {
-          await scannerRef.current.stop();
-          scannerRef.current.clear();
-        } catch (errArret) {
-          // rien à faire
-        }
-        scannerRef.current = null;
-      }
-
       let messageErreurTechnique;
-      if (err && err.message === 'DEMARRAGE_TROP_LONG') {
+      if (err && err.message === 'AUCUNE_CAMERA') {
+        messageErreurTechnique = 'Aucune caméra détectée. Vérifie que l\'autorisation caméra est bien accordée dans les réglages du navigateur.';
+      } else if (err && err.message === 'DEMARRAGE_TROP_LONG') {
         messageErreurTechnique = 'La caméra met trop de temps à répondre. Réessaie, ou change de navigateur si ça persiste.';
       } else if (err && err.name === 'NotAllowedError') {
         messageErreurTechnique = 'Accès à la caméra refusé. Autorise la caméra dans les réglages du navigateur puis réessaie.';
       } else {
         messageErreurTechnique = `Erreur caméra : ${err && err.message ? err.message : 'inconnue'}`;
       }
-
       setMessage(messageErreurTechnique);
       setMessageErreur(true);
       setScanActif(false);
     }
   };
 
-  const arreterScan = () => {
-    if (scannerRef.current) {
-      scannerRef.current.stop().then(() => {
-        scannerRef.current.clear();
-        setScanActif(false);
-      });
-    }
+  const arreterScan = async () => {
+    await scannerApiRef.current.arreter();
+    setScanActif(false);
   };
 
   const pointerManuellement = async (membreId, statut) => {
@@ -222,7 +161,7 @@ function PointageResponsable() {
             </button>
           )}
 
-          <div id="lecteur-qr-responsable" className="mt-4 max-w-xs mx-auto rounded-xl overflow-hidden min-h-[250px]"></div>
+          <ScannerQR ref={scannerApiRef} elementId="lecteur-qr-responsable" onResultat={gererResultatScan} />
 
           {message && (
             <div
