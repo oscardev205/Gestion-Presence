@@ -106,15 +106,30 @@ function Pointage() {
     };
   }, [seanceId]);
 
-    const demarrerScan = async () => {
+  const demarrerScan = async () => {
     setScanActif(true);
     setMessage('');
 
+    if (scannerRef.current) {
+      try {
+        await scannerRef.current.stop();
+        scannerRef.current.clear();
+      } catch (err) {
+        // rien à faire, il n'y avait peut-être rien à arrêter
+      }
+      scannerRef.current = null;
+    }
+
     try {
-      const cameras = await Html5Qrcode.getCameras();
+      let cameras = await Html5Qrcode.getCameras();
 
       if (!cameras || cameras.length === 0) {
-        setMessage('Aucune caméra détectée sur cet appareil');
+        await new Promise((resolve) => setTimeout(resolve, 800));
+        cameras = await Html5Qrcode.getCameras();
+      }
+
+      if (!cameras || cameras.length === 0) {
+        setMessage('Aucune caméra détectée. Vérifie que l\'autorisation caméra est bien accordée dans les réglages du navigateur.');
         setMessageErreur(true);
         setScanActif(false);
         return;
@@ -157,11 +172,15 @@ function Pointage() {
         () => {}
       );
     } catch (err) {
-      setMessage('Impossible d\'accéder à la caméra, vérifie les autorisations');
+      const messageErreurTechnique = err && err.name === 'NotAllowedError'
+        ? 'Accès à la caméra refusé. Autorise la caméra dans les réglages du navigateur puis réessaie.'
+        : 'Impossible d\'accéder à la caméra, réessaie dans quelques secondes.';
+      setMessage(messageErreurTechnique);
       setMessageErreur(true);
       setScanActif(false);
     }
   };
+
   const arreterScan = () => {
     if (scannerRef.current) {
       scannerRef.current.stop().then(() => {
@@ -281,7 +300,7 @@ function Pointage() {
             </div>
           )}
 
-          <div id="lecteur-qr" className="mt-4 max-w-xs mx-auto rounded-xl overflow-hidden"></div>
+          <div id="lecteur-qr" className="mt-4 max-w-xs mx-auto rounded-xl overflow-hidden min-h-[250px]"></div>
 
           {message && (
             <div
