@@ -14,6 +14,13 @@ const STYLES_STATUT = {
   permissionnaire: 'bg-info-bg text-info-text',
 };
 
+function demarrageAvecDelai(promesse, delaiMs) {
+  return Promise.race([
+    promesse,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('DEMARRAGE_TROP_LONG')), delaiMs)),
+  ]);
+}
+
 function Pointage() {
   const { seanceId } = useParams();
   const [membres, setMembres] = useState([]);
@@ -141,40 +148,59 @@ function Pointage() {
       const scanner = new Html5Qrcode('lecteur-qr');
       scannerRef.current = scanner;
 
-      await scanner.start(
-        camera.id,
-        { fps: 10, qrbox: 250 },
-        async (texteDecode) => {
-          if (traitementEnCours.current) return;
-          traitementEnCours.current = true;
+      await demarrageAvecDelai(
+        scanner.start(
+          camera.id,
+          { fps: 10, qrbox: 250 },
+          async (texteDecode) => {
+            if (traitementEnCours.current) return;
+            traitementEnCours.current = true;
 
-          try {
-            const reponse = await api.post('/presences/scan', {
-              seanceId: Number(seanceId),
-              qrCodeValeur: texteDecode,
-            });
-            setMessage(`${reponse.data.membre.nom} pointé (${LABELS_STATUT[reponse.data.presence.statut]})`);
-            setMessageErreur(false);
-            chargerListe();
-          } catch (err) {
-            if (err.response) {
-              setMessage(err.response.data.message);
-            } else {
-              setMessage('Erreur de pointage');
+            try {
+              const reponse = await api.post('/presences/scan', {
+                seanceId: Number(seanceId),
+                qrCodeValeur: texteDecode,
+              });
+              setMessage(`${reponse.data.membre.nom} pointé (${LABELS_STATUT[reponse.data.presence.statut]})`);
+              setMessageErreur(false);
+              chargerListe();
+            } catch (err) {
+              if (err.response) {
+                setMessage(err.response.data.message);
+              } else {
+                setMessage('Erreur de pointage');
+              }
+              setMessageErreur(true);
+            } finally {
+              setTimeout(() => {
+                traitementEnCours.current = false;
+              }, 2000);
             }
-            setMessageErreur(true);
-          } finally {
-            setTimeout(() => {
-              traitementEnCours.current = false;
-            }, 2000);
-          }
-        },
-        () => {}
+          },
+          () => {}
+        ),
+        8000
       );
     } catch (err) {
-      const messageErreurTechnique = err && err.name === 'NotAllowedError'
-        ? 'Accès à la caméra refusé. Autorise la caméra dans les réglages du navigateur puis réessaie.'
-        : 'Impossible d\'accéder à la caméra, réessaie dans quelques secondes.';
+      if (scannerRef.current) {
+        try {
+          await scannerRef.current.stop();
+          scannerRef.current.clear();
+        } catch (errArret) {
+          // rien à faire
+        }
+        scannerRef.current = null;
+      }
+
+      let messageErreurTechnique;
+      if (err && err.message === 'DEMARRAGE_TROP_LONG') {
+        messageErreurTechnique = 'La caméra met trop de temps à répondre. Réessaie, ou change de navigateur si ça persiste.';
+      } else if (err && err.name === 'NotAllowedError') {
+        messageErreurTechnique = 'Accès à la caméra refusé. Autorise la caméra dans les réglages du navigateur puis réessaie.';
+      } else {
+        messageErreurTechnique = `Erreur caméra : ${err && err.message ? err.message : 'inconnue'}`;
+      }
+
       setMessage(messageErreurTechnique);
       setMessageErreur(true);
       setScanActif(false);
