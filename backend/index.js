@@ -32,7 +32,21 @@ io.on('connection', (socket) => {
   });
 });
 
-app.use(cors());
+const originesAutorisees = [
+  'http://localhost:5173',
+  'https://gestion-presence-gt.vercel.app',
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin || originesAutorisees.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Origine non autorisée par CORS'));
+    }
+  },
+  credentials: true,
+}));
 app.use(express.json());
 
 app.use('/api/auth', authRoutes);
