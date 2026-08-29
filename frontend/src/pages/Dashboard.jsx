@@ -11,8 +11,7 @@ function Dashboard() {
     JSON.parse(localStorage.getItem('organisationActive')) || null
   );
   const [chargement, setChargement] = useState(true);
-  const [seanceEnCours, setSeanceEnCours] = useState(null);
-  const [compteurPointage, setCompteurPointage] = useState(null);
+  const [seancesEnCours, setSeancesEnCours] = useState([]);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -38,32 +37,33 @@ function Dashboard() {
   }, []);
 
   useEffect(() => {
-    const chargerSeanceEnCours = async () => {
+    const chargerSeancesEnCours = async () => {
       if (!organisationActive) return;
 
       try {
         const reponseSeances = await api.get('/seances', { params: { organisationId: organisationActive.id } });
-        const active = reponseSeances.data.find((s) => !s.cloturee);
+        const actives = reponseSeances.data.filter((s) => !s.cloturee);
 
-        if (!active) {
-          setSeanceEnCours(null);
-          setCompteurPointage(null);
-          return;
-        }
+        const avecCompteurs = await Promise.all(
+          actives.map(async (s) => {
+            try {
+              const reponseMembres = await api.get(`/presences/seance/${s.id}`);
+              const total = reponseMembres.data.length;
+              const pointes = reponseMembres.data.filter((m) => m.statut).length;
+              return { ...s, total, pointes };
+            } catch (err) {
+              return { ...s, total: 0, pointes: 0 };
+            }
+          })
+        );
 
-        setSeanceEnCours(active);
-
-        const reponseMembres = await api.get(`/presences/seance/${active.id}`);
-        const total = reponseMembres.data.length;
-        const pointes = reponseMembres.data.filter((m) => m.statut).length;
-        setCompteurPointage({ total, pointes });
+        setSeancesEnCours(avecCompteurs);
       } catch (err) {
-        setSeanceEnCours(null);
-        setCompteurPointage(null);
+        setSeancesEnCours([]);
       }
     };
 
-    chargerSeanceEnCours();
+    chargerSeancesEnCours();
   }, [organisationActive]);
 
   const changerOrganisation = (e) => {
@@ -173,22 +173,25 @@ function Dashboard() {
           </p>
         </div>
 
-        {seanceEnCours && (
-          <Link
-            to={`/pointage/${seanceEnCours.id}`}
-            className="flex items-center justify-between gap-3 bg-gradient-to-r from-primary-900 to-primary-600 rounded-2xl p-4 mt-4 hover:opacity-90 active:scale-[0.99] transition"
-          >
-            <div className="flex items-center gap-3 min-w-0">
-              <span className="w-2 h-2 rounded-full bg-white animate-pulse shrink-0"></span>
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-white truncate">{seanceEnCours.titre}</p>
-                <p className="text-xs text-primary-50">
-                  En cours{compteurPointage ? ` · ${compteurPointage.pointes} pointés sur ${compteurPointage.total}` : ''}
-                </p>
-              </div>
-            </div>
-            <ArrowRight className="text-white shrink-0" size={18} />
-          </Link>
+        {seancesEnCours.length > 0 && (
+          <div className="space-y-2 mt-4">
+            {seancesEnCours.map((s) => (
+              <Link
+                key={s.id}
+                to={`/pointage/${s.id}`}
+                className="flex items-center justify-between gap-3 bg-gradient-to-r from-primary-900 to-primary-600 rounded-2xl p-4 hover:opacity-90 active:scale-[0.99] transition"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="w-2 h-2 rounded-full bg-white animate-pulse shrink-0"></span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-white truncate">{s.titre}</p>
+                    <p className="text-xs text-primary-50">En cours · {s.pointes} pointés sur {s.total}</p>
+                  </div>
+                </div>
+                <ArrowRight className="text-white shrink-0" size={18} />
+              </Link>
+            ))}
+          </div>
         )}
 
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4">

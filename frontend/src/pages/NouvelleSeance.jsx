@@ -103,10 +103,16 @@ function NouvelleSeance() {
               </div>
             </div>
 
-            {organisationActive.type === 'ecole' && (organisationActive.roles_hierarchie || []).length > 0 && (
+            {(organisationActive.roles_hierarchie || []).length > 0 && (
               <div>
                 <label className="text-xs text-gray-500 mb-1 block">
-                  Classes concernées {classesChoisies.length === 0 && <span className="text-gray-400">(aucune sélectionnée = toute l'école)</span>}
+                  {organisationActive.type === 'ecole' ? 'Classes concernées' : 'Rôles concernés'}
+                  {' '}
+                  {classesChoisies.length === 0 && (
+                    <span className="text-gray-400">
+                      (aucune sélectionnée = {organisationActive.type === 'ecole' ? 'toute l\'école' : 'toute l\'association'})
+                    </span>
+                  )}
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {organisationActive.roles_hierarchie.map((c) => (
