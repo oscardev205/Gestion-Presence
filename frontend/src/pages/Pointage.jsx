@@ -235,7 +235,7 @@ function Pointage() {
             </div>
           )}
 
-                    {!seance?.cloturee && membres.length > 0 && (
+          {!seance?.cloturee && membres.length > 0 && (
             <div className="bg-gray-50 rounded-xl p-4 mb-4">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-gray-700">Pointage en direct</span>
@@ -296,48 +296,32 @@ function Pointage() {
           )}
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="px-4 sm:px-5 py-3 border-b border-gray-100">
-            <h2 className="text-sm font-semibold text-gray-700">Liste des membres (secours manuel)</h2>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-gray-50 text-gray-500 text-xs">
-                  <th className="text-left font-medium px-4 py-3">Identifiant</th>
-                  <th className="text-left font-medium px-4 py-3">Nom</th>
-                  <th className="text-left font-medium px-4 py-3">Statut</th>
-                  <th className="text-left font-medium px-4 py-3">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {membres.map((m) => (
-                  <tr key={m.membre_id} className="border-t border-gray-100">
-                    <td className="px-4 py-3 font-medium text-gray-700">{m.identifiant}</td>
-                    <td className="px-4 py-3 text-gray-700">{m.nom}</td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-block text-xs font-medium px-2.5 py-1 rounded-full ${STYLES_STATUT[m.statut] || STYLES_STATUT.absent}`}>
-                        {m.statut ? LABELS_STATUT[m.statut] : 'Absent'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <select
-                        value={m.statut || ''}
-                        onChange={(e) => pointerManuellement(m.membre_id, e.target.value)}
-                        disabled={seance?.cloturee || !!m.statut}
-                        className="text-xs bg-gray-50 border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary-400 transition disabled:opacity-50"
-                      >
-                        <option value="" disabled>Choisir</option>
-                        <option value="present">Présent</option>
-                        <option value="retard">En retard</option>
-                        <option value="absent">Absent</option>
-                        <option value="permissionnaire">Permissionnaire</option>
-                      </select>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        <div>
+          <h2 className="text-sm font-semibold text-gray-700 mb-3 px-1">Liste des membres (secours manuel)</h2>
+          <div className="space-y-2">
+            {membres.map((m) => (
+              <div key={m.membre_id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex items-center gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-700 truncate">{m.nom}</p>
+                  <p className="text-xs text-gray-400">{m.identifiant}</p>
+                </div>
+                <span className={`text-xs font-medium px-2.5 py-1 rounded-full shrink-0 ${STYLES_STATUT[m.statut] || STYLES_STATUT.absent}`}>
+                  {m.statut ? LABELS_STATUT[m.statut] : 'Absent'}
+                </span>
+                <select
+                  value={m.statut || ''}
+                  onChange={(e) => pointerManuellement(m.membre_id, e.target.value)}
+                  disabled={seance?.cloturee || !!m.statut}
+                  className="text-xs bg-gray-50 border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary-400 transition disabled:opacity-50 shrink-0"
+                >
+                  <option value="" disabled>Choisir</option>
+                  <option value="present">Présent</option>
+                  <option value="retard">En retard</option>
+                  <option value="absent">Absent</option>
+                  <option value="permissionnaire">Permissionnaire</option>
+                </select>
+              </div>
+            ))}
           </div>
         </div>
       </div>

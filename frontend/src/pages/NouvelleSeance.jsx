@@ -27,10 +27,10 @@ function NouvelleSeance() {
       const reponse = await api.post('/seances', {
         organisationId: organisationActive.id,
         titre,
-        dateSeance,
+        dateSeance: new Date(dateSeance).toISOString(),
         margeRetardMinutes: Number(margeRetard),
         classes: classesChoisies,
-        heureFin: dateFin || undefined,
+        heureFin: dateFin ? new Date(dateFin).toISOString() : undefined,
       });
       navigate(`/pointage/${reponse.data.id}`);
     } catch (err) {

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Building2, Users, CalendarClock, History, BarChart3, Settings, ClipboardCheck, ChevronDown, KeyRound, LogOut, LineChart } from 'lucide-react';
+import { Building2, Users, CalendarClock, History, BarChart3, Settings, ClipboardCheck, ChevronDown, KeyRound, LogOut, LineChart, ArrowRight } from 'lucide-react';
 import api from '../api';
 import BottomNavAdmin from '../components/BottomNavAdmin';
 
@@ -11,6 +11,8 @@ function Dashboard() {
     JSON.parse(localStorage.getItem('organisationActive')) || null
   );
   const [chargement, setChargement] = useState(true);
+  const [seanceEnCours, setSeanceEnCours] = useState(null);
+  const [compteurPointage, setCompteurPointage] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -34,6 +36,35 @@ function Dashboard() {
 
     chargerOrganisations();
   }, []);
+
+  useEffect(() => {
+    const chargerSeanceEnCours = async () => {
+      if (!organisationActive) return;
+
+      try {
+        const reponseSeances = await api.get('/seances', { params: { organisationId: organisationActive.id } });
+        const active = reponseSeances.data.find((s) => !s.cloturee);
+
+        if (!active) {
+          setSeanceEnCours(null);
+          setCompteurPointage(null);
+          return;
+        }
+
+        setSeanceEnCours(active);
+
+        const reponseMembres = await api.get(`/presences/seance/${active.id}`);
+        const total = reponseMembres.data.length;
+        const pointes = reponseMembres.data.filter((m) => m.statut).length;
+        setCompteurPointage({ total, pointes });
+      } catch (err) {
+        setSeanceEnCours(null);
+        setCompteurPointage(null);
+      }
+    };
+
+    chargerSeanceEnCours();
+  }, [organisationActive]);
 
   const changerOrganisation = (e) => {
     const org = organisations.find((o) => o.id === Number(e.target.value));
@@ -141,6 +172,24 @@ function Dashboard() {
             Sigle : <span className="text-gray-600 font-medium">{organisationActive?.sigle}</span>
           </p>
         </div>
+
+        {seanceEnCours && (
+          <Link
+            to={`/pointage/${seanceEnCours.id}`}
+            className="flex items-center justify-between gap-3 bg-gradient-to-r from-primary-900 to-primary-600 rounded-2xl p-4 mt-4 hover:opacity-90 active:scale-[0.99] transition"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <span className="w-2 h-2 rounded-full bg-white animate-pulse shrink-0"></span>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-white truncate">{seanceEnCours.titre}</p>
+                <p className="text-xs text-primary-50">
+                  En cours{compteurPointage ? ` · ${compteurPointage.pointes} pointés sur ${compteurPointage.total}` : ''}
+                </p>
+              </div>
+            </div>
+            <ArrowRight className="text-white shrink-0" size={18} />
+          </Link>
+        )}
 
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4">
           {boutons.map(({ to, label, icone: Icone }) => (
