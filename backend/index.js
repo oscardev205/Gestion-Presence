@@ -14,6 +14,7 @@ const exportsRoutes = require('./routes/exports');
 const membreAuthRoutes = require('./routes/membreAuth');
 const membreEspaceRoutes = require('./routes/membreEspace');
 const responsableAuthRoutes = require('./routes/responsableAuth');
+const uploadRoutes = require('./routes/upload');
 
 const app = express();
 const serveur = http.createServer(app);
@@ -62,6 +63,7 @@ app.use('/api/exports', exportsRoutes);
 app.use('/api/membre-auth', membreAuthRoutes);
 app.use('/api/membre-espace', membreEspaceRoutes);
 app.use('/api/responsables', responsableAuthRoutes);
+app.use('/api/upload', uploadRoutes);
 
 app.get('/api/health', async (req, res) => {
   try {
