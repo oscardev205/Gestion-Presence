@@ -190,6 +190,20 @@ async function recupererDonneesMembrePourLuiMeme(membreId) {
   return { membre, nombreSeances, historique: historiqueResultat.rows, recap, tauxPresence };
 }
 
+async function urlVersDataUri(url) {
+  if (!url) return null;
+  try {
+    const reponse = await fetch(url);
+    if (!reponse.ok) return null;
+    const buffer = Buffer.from(await reponse.arrayBuffer());
+    const contentType = reponse.headers.get('content-type') || 'image/jpeg';
+    return `data:${contentType};base64,${buffer.toString('base64')}`;
+  } catch (err) {
+    console.error('Erreur telechargement image pour carte:', err.message);
+    return null;
+  }
+}
+
 async function recupererMembresPourFichesQr(organisationId, adminId, classe) {
   const orgResultat = await pool.query(
     'SELECT * FROM organisations WHERE id = $1 AND admin_id = $2',
@@ -1240,9 +1254,19 @@ router.get('/membre/:id/carte', verifierToken, async (req, res) => {
     const format = req.query.format === 'horizontal' ? 'horizontal' : 'vertical';
     const qrDataUrl = await QRCode.toDataURL(membre.qr_code_valeur, { width: 300, margin: 1 });
 
+    if (membre.photo_url) {
+      const photoDataUri = await urlVersDataUri(membre.photo_url);
+      if (photoDataUri) membre.photo_url = photoDataUri;
+    }
+
+    if (membre.fond_carte_url && !membre.fond_carte_url.startsWith('preset:')) {
+      const fondDataUri = await urlVersDataUri(membre.fond_carte_url);
+      if (fondDataUri) membre.fond_carte_url = fondDataUri;
+    }
+
     navigateur = await lancerNavigateur();
     const page = await navigateur.newPage();
-    await page.setContent(genererHtmlCarte(membre, qrDataUrl, format), { waitUntil: 'networkidle0' });
+    await page.setContent(genererHtmlCarte(membre, qrDataUrl, format), { waitUntil: 'load' });
     const pdfBuffer = await page.pdf({ printBackground: true, preferCSSPageSize: true });
 
     res.setHeader('Content-Type', 'application/pdf');
@@ -1268,15 +1292,31 @@ router.get('/organisation/:id/cartes', verifierToken, async (req, res) => {
 
     const format = req.query.format === 'horizontal' ? 'horizontal' : 'vertical';
 
+    let fondCarteResolu = donnees.organisation.fond_carte_url;
+    if (fondCarteResolu && !fondCarteResolu.startsWith('preset:')) {
+      const fondDataUri = await urlVersDataUri(fondCarteResolu);
+      if (fondDataUri) fondCarteResolu = fondDataUri;
+    }
+
     const membresAvecOrg = await Promise.all(
       donnees.membres.map(async (m) => {
-        const detail = await pool.query('SELECT societe, telephone FROM membres WHERE id = $1', [m.id]);
+        const detail = await pool.query('SELECT societe, telephone, photo_url FROM membres WHERE id = $1', [m.id]);
+        const ligne = detail.rows[0] || {};
+
+        let photoResolue = ligne.photo_url || null;
+        if (photoResolue) {
+          const photoDataUri = await urlVersDataUri(photoResolue);
+          if (photoDataUri) photoResolue = photoDataUri;
+        }
+
         return {
           ...m,
           organisation_nom: donnees.organisation.nom,
           organisation_type: donnees.organisation.type,
-          fond_carte_url: donnees.organisation.fond_carte_url,
-          societe: detail.rows[0]?.societe || null,
+          fond_carte_url: fondCarteResolu,
+          societe: ligne.societe || null,
+          telephone: ligne.telephone || null,
+          photo_url: photoResolue,
         };
       })
     );
@@ -1305,7 +1345,7 @@ router.get('/organisation/:id/cartes', verifierToken, async (req, res) => {
 
     navigateur = await lancerNavigateur();
     const page = await navigateur.newPage();
-    await page.setContent(htmlComplet, { waitUntil: 'networkidle0' });
+    await page.setContent(htmlComplet, { waitUntil: 'load' });
     const pdfBuffer = await page.pdf({ printBackground: true, preferCSSPageSize: true });
 
     res.setHeader('Content-Type', 'application/pdf');
