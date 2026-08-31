@@ -1,5 +1,6 @@
 const express = require('express');
 const multer = require('multer');
+const sharp = require('sharp');
 const { put } = require('@vercel/blob');
 const verifierToken = require('../middleware/auth');
 
@@ -18,11 +19,18 @@ router.post('/', verifierToken, upload.single('fichier'), async (req, res) => {
 
   try {
     const dossier = req.body.dossier === 'organisations' ? 'organisations' : 'membres';
-    const nomFichier = `${dossier}/${Date.now()}-${req.file.originalname.replace(/\s+/g, '-')}`;
+    const largeurMax = dossier === 'organisations' ? 1200 : 600;
 
-    const blob = await put(nomFichier, req.file.buffer, {
+    const bufferWebp = await sharp(req.file.buffer)
+      .resize({ width: largeurMax, height: largeurMax, fit: 'inside', withoutEnlargement: true })
+      .webp({ quality: 82 })
+      .toBuffer();
+
+    const nomFichier = `${dossier}/${Date.now()}-${req.file.originalname.replace(/\.[^/.]+$/, '').replace(/\s+/g, '-')}.webp`;
+
+    const blob = await put(nomFichier, bufferWebp, {
       access: 'public',
-      contentType: req.file.mimetype,
+      contentType: 'image/webp',
       token: process.env.BLOB_READ_WRITE_TOKEN,
     });
 
