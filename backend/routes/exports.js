@@ -1,6 +1,7 @@
 const express = require('express');
 const ExcelJS = require('exceljs');
-const chromium = require('@sparticuz/chromium');
+const chromiumModule = require('@sparticuz/chromium');
+const chromium = chromiumModule.default || chromiumModule;
 const puppeteer = require('puppeteer-core');
 const QRCode = require('qrcode');
 const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, HeadingLevel, WidthType, AlignmentType } = require('docx');
