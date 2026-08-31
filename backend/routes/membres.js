@@ -28,14 +28,28 @@ router.post('/', verifierToken, async (req, res) => {
       return res.status(404).json({ message: 'Organisation introuvable' });
     }
 
-    const compte = await pool.query(
-      'SELECT COUNT(*) FROM membres WHERE organisation_id = $1',
-      [organisationId]
-    );
-    const prochainNumero = Number(compte.rows[0].count) + 1;
-    const identifiant = `${organisation.sigle}-${prochainNumero}`;
+       const genererCodeAleatoire = () => {
+      const caracteres = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      let code = '';
+      for (let i = 0; i < 6; i++) {
+        code += caracteres.charAt(Math.floor(Math.random() * caracteres.length));
+      }
+      return code;
+    };
+
+    let identifiant;
+    let identifiantLibre = false;
+    while (!identifiantLibre) {
+      identifiant = `${organisation.sigle}-${genererCodeAleatoire()}`;
+      const dejaPris = await pool.query(
+        'SELECT id FROM membres WHERE organisation_id = $1 AND identifiant = $2',
+        [organisationId, identifiant]
+      );
+      identifiantLibre = dejaPris.rows.length === 0;
+    }
+
     const qrCodeValeur = crypto.randomUUID();
-        const codePin = String(Math.floor(1000 + Math.random() * 9000));
+    const codePin = String(Math.floor(1000 + Math.random() * 9000));
 
     const resultat = await pool.query(
       `INSERT INTO membres (organisation_id, nom, role, identifiant, qr_code_valeur, code_pin)
