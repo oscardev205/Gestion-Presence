@@ -23,7 +23,7 @@ function Membres() {
   const [membres, setMembres] = useState([]);
   const [nom, setNom] = useState('');
   const [role, setRole] = useState('');
-    const [telephone, setTelephone] = useState('');
+  const [telephone, setTelephone] = useState('');
   const [societe, setSociete] = useState('');
   const [photoFile, setPhotoFile] = useState(null);
   const [photoApercu, setPhotoApercu] = useState('');
@@ -53,7 +53,14 @@ function Membres() {
     chargerMembres();
   }, []);
 
-    const handleAjout = async (e) => {
+  const handleChoixPhoto = (e) => {
+    const fichier = e.target.files[0];
+    if (!fichier) return;
+    setPhotoFile(fichier);
+    setPhotoApercu(URL.createObjectURL(fichier));
+  };
+
+  const handleAjout = async (e) => {
     e.preventDefault();
     setErreur('');
 
@@ -99,12 +106,6 @@ function Membres() {
     const valeur = e.target.value;
     setRecherche(valeur);
     chargerMembres(valeur);
-  };
-    const handleChoixPhoto = (e) => {
-    const fichier = e.target.files[0];
-    if (!fichier) return;
-    setPhotoFile(fichier);
-    setPhotoApercu(URL.createObjectURL(fichier));
   };
 
   const genererImage = (membre, qrDataUrl) => {
@@ -206,7 +207,8 @@ function Membres() {
     }
   };
 
-    const telechargerCarte = async (membre, format) => {
+  const telechargerCarte = async (membre, format) => {
+    setErreur('');
     try {
       const reponse = await api.get(`/exports/membre/${membre.id}/carte`, {
         params: { format },
@@ -224,6 +226,7 @@ function Membres() {
   };
 
   const telechargerCartesGroupees = async (format) => {
+    setErreur('');
     try {
       const reponse = await api.get(`/exports/organisation/${organisationActive.id}/cartes`, {
         params: { format, classe: classeExport || undefined },
@@ -314,7 +317,7 @@ function Membres() {
               )}
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
               <label className="flex items-center gap-1.5 px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-600 cursor-pointer hover:bg-gray-100 transition">
                 <ImagePlus size={16} />
                 Photo (optionnel)
@@ -393,12 +396,20 @@ function Membres() {
                 className={`bg-white rounded-2xl shadow-sm border border-gray-100 p-4 ${membre.statut === 'suspendu' ? 'opacity-60' : ''}`}
               >
                 <div className="flex items-center gap-3 mb-3">
-                  <div
-                    className="w-11 h-11 rounded-full flex items-center justify-center text-white text-sm font-semibold shrink-0"
-                    style={{ backgroundColor: couleurAvatar(membre.nom) }}
-                  >
-                    {initialesDe(membre.nom)}
-                  </div>
+                  {membre.photo_url ? (
+                    <img
+                      src={membre.photo_url}
+                      alt={membre.nom}
+                      className="w-11 h-11 rounded-full object-cover shrink-0 border border-gray-100"
+                    />
+                  ) : (
+                    <div
+                      className="w-11 h-11 rounded-full flex items-center justify-center text-white text-sm font-semibold shrink-0"
+                      style={{ backgroundColor: couleurAvatar(membre.nom) }}
+                    >
+                      {initialesDe(membre.nom)}
+                    </div>
+                  )}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-gray-800 truncate">{membre.nom}</p>
                     <p className="text-xs text-gray-400">{membre.identifiant}{membre.role ? ` · ${membre.role}` : ''}</p>
