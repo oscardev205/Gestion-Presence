@@ -112,4 +112,29 @@ router.get('/comparaison', verifierToken, async (req, res) => {
   }
 });
 
+router.patch('/:id/fond-carte', verifierToken, async (req, res) => {
+  const { fondCarteUrl } = req.body;
+
+  try {
+    const organisation = await pool.query(
+      'SELECT * FROM organisations WHERE id = $1 AND admin_id = $2',
+      [req.params.id, req.adminId]
+    );
+
+    if (organisation.rows.length === 0) {
+      return res.status(404).json({ message: 'Organisation introuvable' });
+    }
+
+    const resultat = await pool.query(
+      'UPDATE organisations SET fond_carte_url = $1 WHERE id = $2 RETURNING *',
+      [fondCarteUrl || null, req.params.id]
+    );
+
+    res.json(resultat.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Erreur serveur lors de la mise à jour du fond de carte' });
+  }
+});
+
 module.exports = router;

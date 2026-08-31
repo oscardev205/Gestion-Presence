@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Save, ListOrdered, UserPlus, Trash2, Users } from 'lucide-react';
+import { ArrowLeft, Save, ListOrdered, UserPlus, Trash2, Users, ImagePlus } from 'lucide-react';
 import api from '../api';
 
 function ReglagesOrganisation() {
@@ -12,6 +12,18 @@ function ReglagesOrganisation() {
   const [emailResponsable, setEmailResponsable] = useState('');
   const [motDePasseResponsable, setMotDePasseResponsable] = useState('');
   const [messageResponsable, setMessageResponsable] = useState('');
+
+  const [fondCarteFile, setFondCarteFile] = useState(null);
+  const [fondCarteApercu, setFondCarteApercu] = useState(organisationActive?.fond_carte_url || '');
+  const [uploadFondEnCours, setUploadFondEnCours] = useState(false);
+  const [messageFond, setMessageFond] = useState('');
+
+  const FONDS_PREDEFINIS = [
+    { id: 'classique', nom: 'Classique teal', style: 'linear-gradient(135deg, #085041, #0F6E56)' },
+    { id: 'fonce', nom: 'Dégradé foncé', style: 'linear-gradient(135deg, #04342C, #085041)' },
+    { id: 'clair', nom: 'Sobre clair', style: 'linear-gradient(135deg, #E1F5EE, #9FE1CB)' },
+    { id: 'contraste', nom: 'Contraste vif', style: 'linear-gradient(135deg, #0F6E56, #5DCAA5)' },
+  ];
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -73,6 +85,51 @@ function ReglagesOrganisation() {
       chargerResponsables();
     } catch (err) {
       setMessageResponsable('Erreur lors de la suppression');
+    }
+  };
+
+  const choisirFondPredefini = async (idFond) => {
+    setMessageFond('');
+    try {
+      const reponse = await api.patch(`/organisations/${organisationActive.id}/fond-carte`, {
+        fondCarteUrl: `preset:${idFond}`,
+      });
+      localStorage.setItem('organisationActive', JSON.stringify(reponse.data));
+      setFondCarteApercu('');
+      setMessageFond('Fond de carte mis à jour');
+    } catch (err) {
+      setMessageFond('Erreur lors de la mise à jour');
+    }
+  };
+
+  const handleChoixFondCarte = (e) => {
+    const fichier = e.target.files[0];
+    if (!fichier) return;
+    setFondCarteFile(fichier);
+    setFondCarteApercu(URL.createObjectURL(fichier));
+  };
+
+  const televerserFondCarte = async () => {
+    if (!fondCarteFile) return;
+    setMessageFond('');
+    setUploadFondEnCours(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('fichier', fondCarteFile);
+      formData.append('dossier', 'organisations');
+      const reponseUpload = await api.post('/upload', formData);
+
+      const reponse = await api.patch(`/organisations/${organisationActive.id}/fond-carte`, {
+        fondCarteUrl: reponseUpload.data.url,
+      });
+      localStorage.setItem('organisationActive', JSON.stringify(reponse.data));
+      setMessageFond('Fond de carte personnalisé mis à jour');
+      setFondCarteFile(null);
+    } catch (err) {
+      setMessageFond('Erreur lors de l\'upload du fond de carte');
+    } finally {
+      setUploadFondEnCours(false);
     }
   };
 
@@ -189,6 +246,54 @@ function ReglagesOrganisation() {
               ))}
             </div>
           )}
+        </div>
+
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 sm:p-6 mt-4">
+          <div className="flex items-center gap-2 mb-2">
+            <ImagePlus className="text-primary-600" size={18} />
+            <h2 className="text-sm font-semibold text-gray-800">Fond des cartes membres</h2>
+          </div>
+          <p className="text-sm text-gray-500 mb-4">Choisis un fond prédéfini, ou importe le tien.</p>
+
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            {FONDS_PREDEFINIS.map((fond) => (
+              <button
+                key={fond.id}
+                onClick={() => choisirFondPredefini(fond.id)}
+                className="h-16 rounded-xl border border-gray-200 hover:border-primary-400 transition relative overflow-hidden"
+                style={{ background: fond.style }}
+              >
+                <span className="absolute bottom-1 left-2 text-[10px] font-medium text-white/90">{fond.nom}</span>
+              </button>
+            ))}
+          </div>
+
+          <div className="border-t border-gray-100 pt-4">
+            <label className="flex items-center gap-1.5 px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-600 cursor-pointer hover:bg-gray-100 transition w-fit">
+              <ImagePlus size={16} />
+              Importer mon propre fond
+              <input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleChoixFondCarte} className="hidden" />
+            </label>
+
+            {fondCarteApercu && (
+              <div className="mt-3">
+                <img src={fondCarteApercu} alt="Aperçu du fond" className="w-full h-24 object-cover rounded-xl border border-gray-200" />
+                {fondCarteFile && (
+                  <button
+                    onClick={televerserFondCarte}
+                    disabled={uploadFondEnCours}
+                    className="mt-2 w-full py-2.5 bg-gradient-to-r from-primary-900 to-primary-400 text-white text-sm font-medium rounded-xl hover:opacity-90 active:scale-[0.98] transition disabled:opacity-60"
+                  >
+                    {uploadFondEnCours ? 'Envoi...' : 'Utiliser ce fond'}
+                  </button>
+                )}
+              </div>
+            )}
+
+            {messageFond && (
+              <p className="text-sm text-success-text bg-success-bg rounded-lg px-3 py-2 mt-3 anim-apparition">{messageFond}</p>
+            )}
+          </div>
         </div>
       </div>
     </div>
