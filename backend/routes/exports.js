@@ -1,7 +1,6 @@
 const express = require('express');
 const ExcelJS = require('exceljs');
-const chromiumModule = require('@sparticuz/chromium');
-const chromium = chromiumModule.default || chromiumModule;
+const chromium = require('@sparticuz/chromium');
 const puppeteer = require('puppeteer-core');
 const QRCode = require('qrcode');
 const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, HeadingLevel, WidthType, AlignmentType } = require('docx');
@@ -212,6 +211,115 @@ async function recupererMembresPourFichesQr(organisationId, adminId, classe) {
   const membres = trierMembres(membresResultat.rows, organisation);
 
   return { organisation, membres, classe: classe || null };
+}
+
+const FONDS_PRESETS = {
+  classique: 'linear-gradient(135deg, #085041, #0F6E56)',
+  fonce: 'linear-gradient(135deg, #04342C, #085041)',
+  clair: 'linear-gradient(135deg, #E1F5EE, #9FE1CB)',
+  contraste: 'linear-gradient(135deg, #0F6E56, #5DCAA5)',
+};
+
+function resoudreFondCarte(fondCarteUrl) {
+  if (!fondCarteUrl) return { type: 'gradient', valeur: FONDS_PRESETS.classique };
+  if (fondCarteUrl.startsWith('preset:')) {
+    const id = fondCarteUrl.replace('preset:', '');
+    return { type: 'gradient', valeur: FONDS_PRESETS[id] || FONDS_PRESETS.classique };
+  }
+  return { type: 'image', valeur: fondCarteUrl };
+}
+
+function initialesDeNom(nom) {
+  if (!nom) return '?';
+  return nom.split(' ').map((mot) => mot[0]).slice(0, 2).join('').toUpperCase();
+}
+
+async function recupererDonneesMembrePourCarte(membreId, adminId) {
+  const resultat = await pool.query(
+    `SELECT m.*, o.nom AS organisation_nom, o.type AS organisation_type, o.fond_carte_url
+     FROM membres m
+     JOIN organisations o ON o.id = m.organisation_id
+     WHERE m.id = $1 AND o.admin_id = $2`,
+    [membreId, adminId]
+  );
+  if (resultat.rows.length === 0) return null;
+  return resultat.rows[0];
+}
+
+function genererHtmlCarte(membre, qrDataUrl, format) {
+  const fond = resoudreFondCarte(membre.fond_carte_url);
+  const fondCss = fond.type === 'image' ? `url('${fond.valeur}') center/cover no-repeat` : fond.valeur;
+  const estVertical = format !== 'horizontal';
+  const largeur = estVertical ? '54mm' : '86mm';
+  const hauteur = estVertical ? '86mm' : '54mm';
+
+  const photoHtml = membre.photo_url
+    ? `<img src="${membre.photo_url}" class="photo" />`
+    : `<div class="photo photo-defaut">${echapperHtml(initialesDeNom(membre.nom))}</div>`;
+
+  const societeHtml = membre.organisation_type === 'association' && membre.societe
+    ? `<p class="societe">${echapperHtml(membre.societe)}</p>`
+    : '';
+
+  return `
+    <html>
+    <head><style>
+      @page { size: ${largeur} ${hauteur}; margin: 0; }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { font-family: Arial, sans-serif; }
+      .carte {
+        width: ${largeur}; height: ${hauteur};
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        background: ${fondCss}; color: #ffffff; position: relative; overflow: hidden;
+        page-break-after: always;
+      }
+      .org-nom {
+        position: absolute; top: 3mm; left: 0; right: 0; text-align: center;
+        font-size: 7px; font-weight: bold; letter-spacing: 0.5px;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.35);
+      }
+      .photo {
+        width: ${estVertical ? '18mm' : '15mm'}; height: ${estVertical ? '18mm' : '15mm'};
+        border-radius: 50%; object-fit: cover; border: 1px solid #ffffff;
+        background: #ffffff;
+      }
+      .photo-defaut {
+        display: flex; align-items: center; justify-content: center;
+        font-size: 14px; font-weight: bold; color: #085041;
+      }
+      .nom { font-size: 10px; font-weight: bold; margin-top: 2mm; text-align: center; padding: 0 3mm; text-shadow: 0 1px 2px rgba(0,0,0,0.35); }
+      .role { font-size: 7px; margin-top: 0.5mm; opacity: 0.9; text-align: center; }
+      .societe { font-size: 6.5px; margin-top: 0.5mm; opacity: 0.85; text-align: center; }
+      .pill {
+        margin-top: 2mm; padding: 1mm 3mm; background: rgba(255,255,255,0.9); color: #085041;
+        border-radius: 10mm; font-size: 7.5px; font-weight: bold;
+      }
+      .verso { justify-content: center; }
+      .qr { width: ${estVertical ? '28mm' : '24mm'}; height: ${estVertical ? '28mm' : '24mm'}; background: #ffffff; padding: 2mm; border-radius: 2mm; }
+      .verso-id { font-size: 7px; font-weight: bold; margin-top: 2mm; }
+      .verso-footer { font-size: 5.5px; margin-top: 1mm; opacity: 0.85; text-align: center; padding: 0 3mm; }
+    </style></head>
+    <body>
+      <div class="carte">
+        <div class="org-nom">${echapperHtml(membre.organisation_nom)}</div>
+        ${photoHtml}
+        <p class="nom">${echapperHtml(membre.nom)}</p>
+        ${membre.role ? `<p class="role">${echapperHtml(membre.role)}</p>` : ''}
+        ${societeHtml}
+        <div class="pill">${echapperHtml(membre.identifiant)}</div>
+      </div>
+      <div class="carte verso">
+        <img src="${qrDataUrl}" class="qr" />
+        <p class="verso-id">${echapperHtml(membre.identifiant)}</p>
+        <p class="verso-footer">Scanner pour verifier ce badge</p>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
+function genererHtmlCartesGroupees(membres, format) {
+  return membres.map((m) => genererHtmlCarte(m, m.qrDataUrlCalcule, format)).join('');
 }
 
 function genererHtmlSeance(donnees) {
@@ -1070,6 +1178,94 @@ router.get('/organisation/:id/fiches-qr', verifierToken, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Erreur lors de la génération des fiches QR' });
+  } finally {
+    if (navigateur) await navigateur.close();
+  }
+});
+
+router.get('/membre/:id/carte', verifierToken, async (req, res) => {
+  let navigateur;
+  try {
+    const membre = await recupererDonneesMembrePourCarte(req.params.id, req.adminId);
+    if (!membre) return res.status(404).json({ message: 'Membre introuvable' });
+
+    const format = req.query.format === 'horizontal' ? 'horizontal' : 'vertical';
+    const qrDataUrl = await QRCode.toDataURL(membre.qr_code_valeur, { width: 300, margin: 1 });
+
+    navigateur = await lancerNavigateur();
+    const page = await navigateur.newPage();
+    await page.setContent(genererHtmlCarte(membre, qrDataUrl, format), { waitUntil: 'networkidle0' });
+    const pdfBuffer = await page.pdf({ printBackground: true, preferCSSPageSize: true });
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=carte_${membre.identifiant}.pdf`);
+    res.send(pdfBuffer);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Erreur lors de la génération de la carte' });
+  } finally {
+    if (navigateur) await navigateur.close();
+  }
+});
+
+router.get('/organisation/:id/cartes', verifierToken, async (req, res) => {
+  let navigateur;
+  try {
+    const donnees = await recupererMembresPourFichesQr(req.params.id, req.adminId, req.query.classe);
+    if (!donnees) return res.status(404).json({ message: 'Organisation introuvable' });
+
+    if (donnees.membres.length === 0) {
+      return res.status(400).json({ message: 'Aucun membre actif à exporter' });
+    }
+
+    const format = req.query.format === 'horizontal' ? 'horizontal' : 'vertical';
+
+    const membresAvecOrg = await Promise.all(
+      donnees.membres.map(async (m) => {
+        const detail = await pool.query('SELECT societe, telephone FROM membres WHERE id = $1', [m.id]);
+        return {
+          ...m,
+          organisation_nom: donnees.organisation.nom,
+          organisation_type: donnees.organisation.type,
+          fond_carte_url: donnees.organisation.fond_carte_url,
+          societe: detail.rows[0]?.societe || null,
+        };
+      })
+    );
+
+    const pagesHtml = await Promise.all(
+      membresAvecOrg.map(async (m) => {
+        const qrDataUrl = await QRCode.toDataURL(m.qr_code_valeur, { width: 300, margin: 1 });
+        return genererHtmlCarte(m, qrDataUrl, format);
+      })
+    );
+
+    const estVertical = format !== 'horizontal';
+    const largeur = estVertical ? '54mm' : '86mm';
+    const hauteur = estVertical ? '86mm' : '54mm';
+
+    const htmlComplet = `
+      <html>
+      <head><style>
+        @page { size: ${largeur} ${hauteur}; margin: 0; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: Arial, sans-serif; }
+      </style></head>
+      <body>${pagesHtml.map((h) => h.match(/<body>([\s\S]*)<\/body>/)[1]).join('')}</body>
+      </html>
+    `;
+
+    navigateur = await lancerNavigateur();
+    const page = await navigateur.newPage();
+    await page.setContent(htmlComplet, { waitUntil: 'networkidle0' });
+    const pdfBuffer = await page.pdf({ printBackground: true, preferCSSPageSize: true });
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=cartes_${donnees.organisation.nom}.pdf`);
+    res.send(pdfBuffer);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Erreur lors de la génération des cartes' });
   } finally {
     if (navigateur) await navigateur.close();
   }

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import QRCode from 'qrcode';
-import { Search, Plus, Download, QrCode, UserX, UserCheck, FileDown, ArrowLeft, FileStack, ImagePlus } from 'lucide-react';
+import { Search, Plus, Download, QrCode, UserX, UserCheck, FileDown, ArrowLeft, FileStack, ImagePlus, CreditCard } from 'lucide-react';
 import api from '../api';
 import BottomNavAdmin from '../components/BottomNavAdmin';
 
@@ -206,6 +206,40 @@ function Membres() {
     }
   };
 
+    const telechargerCarte = async (membre, format) => {
+    try {
+      const reponse = await api.get(`/exports/membre/${membre.id}/carte`, {
+        params: { format },
+        responseType: 'blob',
+      });
+      const url = window.URL.createObjectURL(new Blob([reponse.data]));
+      const lien = document.createElement('a');
+      lien.href = url;
+      lien.download = `carte_${membre.identifiant}_${format}.pdf`;
+      lien.click();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      setErreur('Erreur lors de la génération de la carte');
+    }
+  };
+
+  const telechargerCartesGroupees = async (format) => {
+    try {
+      const reponse = await api.get(`/exports/organisation/${organisationActive.id}/cartes`, {
+        params: { format, classe: classeExport || undefined },
+        responseType: 'blob',
+      });
+      const url = window.URL.createObjectURL(new Blob([reponse.data]));
+      const lien = document.createElement('a');
+      lien.href = url;
+      lien.download = `cartes_${organisationActive.nom}_${format}.pdf`;
+      lien.click();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      setErreur('Erreur lors de la génération des cartes');
+    }
+  };
+
   if (!organisationActive) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -331,7 +365,19 @@ function Membres() {
             onClick={telechargerFichesGroupees}
             className="flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-50 transition"
           >
-            <FileStack size={14} /> Exporter les fiches QR (PDF)
+            <FileStack size={14} /> Fiches QR (PDF)
+          </button>
+          <button
+            onClick={() => telechargerCartesGroupees('vertical')}
+            className="flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-50 transition"
+          >
+            <CreditCard size={14} /> Cartes verticales
+          </button>
+          <button
+            onClick={() => telechargerCartesGroupees('horizontal')}
+            className="flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-50 transition"
+          >
+            <CreditCard size={14} /> Cartes horizontales
           </button>
         </div>
 
@@ -366,9 +412,15 @@ function Membres() {
                   </span>
                 </div>
 
-                <div className="flex items-center gap-4 pt-3 border-t border-gray-100 text-gray-400">
+                <div className="flex items-center gap-4 pt-3 border-t border-gray-100 text-gray-400 flex-wrap">
                   <button onClick={() => telechargerFiche(membre)} title="Télécharger la fiche" className="flex items-center gap-1.5 text-xs hover:text-primary-600 transition">
                     <Download size={15} /> Fiche
+                  </button>
+                  <button onClick={() => telechargerCarte(membre, 'vertical')} title="Carte verticale" className="flex items-center gap-1.5 text-xs hover:text-primary-600 transition">
+                    <CreditCard size={15} /> Carte V
+                  </button>
+                  <button onClick={() => telechargerCarte(membre, 'horizontal')} title="Carte horizontale" className="flex items-center gap-1.5 text-xs hover:text-primary-600 transition">
+                    <CreditCard size={15} /> Carte H
                   </button>
                   <button onClick={() => regenererQr(membre)} title="Régénérer le QR" className="flex items-center gap-1.5 text-xs hover:text-primary-600 transition">
                     <QrCode size={15} /> QR
