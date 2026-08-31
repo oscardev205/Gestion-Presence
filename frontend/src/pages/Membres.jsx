@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import QRCode from 'qrcode';
-import { Search, Plus, Download, QrCode, UserX, UserCheck, FileDown, ArrowLeft, FileStack } from 'lucide-react';
+import { Search, Plus, Download, QrCode, UserX, UserCheck, FileDown, ArrowLeft, FileStack, ImagePlus } from 'lucide-react';
 import api from '../api';
 import BottomNavAdmin from '../components/BottomNavAdmin';
 
@@ -23,6 +23,11 @@ function Membres() {
   const [membres, setMembres] = useState([]);
   const [nom, setNom] = useState('');
   const [role, setRole] = useState('');
+    const [telephone, setTelephone] = useState('');
+  const [societe, setSociete] = useState('');
+  const [photoFile, setPhotoFile] = useState(null);
+  const [photoApercu, setPhotoApercu] = useState('');
+  const [uploadEnCours, setUploadEnCours] = useState(false);
   const [recherche, setRecherche] = useState('');
   const [erreur, setErreur] = useState('');
   const [chargement, setChargement] = useState(true);
@@ -48,20 +53,42 @@ function Membres() {
     chargerMembres();
   }, []);
 
-  const handleAjout = async (e) => {
+    const handleAjout = async (e) => {
     e.preventDefault();
     setErreur('');
 
     try {
+      let photoUrl = '';
+
+      if (photoFile) {
+        setUploadEnCours(true);
+        const formData = new FormData();
+        formData.append('fichier', photoFile);
+        formData.append('dossier', 'membres');
+        const reponseUpload = await api.post('/upload', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        photoUrl = reponseUpload.data.url;
+        setUploadEnCours(false);
+      }
+
       await api.post('/membres', {
         organisationId: organisationActive.id,
         nom,
         role,
+        telephone: telephone || undefined,
+        societe: organisationActive.type === 'association' ? (societe || undefined) : undefined,
+        photoUrl: photoUrl || undefined,
       });
       setNom('');
       setRole('');
+      setTelephone('');
+      setSociete('');
+      setPhotoFile(null);
+      setPhotoApercu('');
       chargerMembres();
     } catch (err) {
+      setUploadEnCours(false);
       if (err.response) {
         setErreur(err.response.data.message);
       } else {
@@ -74,6 +101,12 @@ function Membres() {
     const valeur = e.target.value;
     setRecherche(valeur);
     chargerMembres(valeur);
+  };
+    const handleChoixPhoto = (e) => {
+    const fichier = e.target.files[0];
+    if (!fichier) return;
+    setPhotoFile(fichier);
+    setPhotoApercu(URL.createObjectURL(fichier));
   };
 
   const genererImage = (membre, qrDataUrl) => {
@@ -197,42 +230,75 @@ function Membres() {
 
       <div className="max-w-2xl mx-auto px-4 sm:px-6 -mt-8 anim-apparition">
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-5 mb-4">
-          <form onSubmit={handleAjout} className="flex flex-col sm:flex-row gap-2">
-            <input
-              type="text"
-              placeholder="Nom du membre"
-              value={nom}
-              onChange={(e) => setNom(e.target.value)}
-              required
-              className="flex-1 px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent transition"
-            />
-            {(organisationActive.roles_hierarchie || []).length > 0 ? (
-              <select
-                value={role}
-                onChange={(e) => setRole(e.target.value)}
-                required
-                className="px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent transition"
-              >
-                <option value="" disabled>{organisationActive.type === 'ecole' ? 'Choisir une classe' : 'Choisir un rôle'}</option>
-                {organisationActive.roles_hierarchie.map((r) => (
-                  <option key={r} value={r}>{r}</option>
-                ))}
-              </select>
-            ) : (
+          <form onSubmit={handleAjout} className="space-y-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <input
                 type="text"
-                placeholder={organisationActive.type === 'ecole' ? 'Classe (optionnel)' : 'Rôle (optionnel)'}
-                value={role}
-                onChange={(e) => setRole(e.target.value)}
-                className="px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent transition"
+                placeholder="Nom du membre"
+                value={nom}
+                onChange={(e) => setNom(e.target.value)}
+                required
+                className="flex-1 px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent transition"
               />
-            )}
-            <button
-              type="submit"
-              className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-gradient-to-r from-primary-900 to-primary-400 text-white text-sm font-medium rounded-xl hover:opacity-90 active:scale-[0.98] transition whitespace-nowrap"
-            >
-              <Plus size={16} /> Ajouter
-            </button>
+              {(organisationActive.roles_hierarchie || []).length > 0 ? (
+                <select
+                  value={role}
+                  onChange={(e) => setRole(e.target.value)}
+                  required
+                  className="px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent transition"
+                >
+                  <option value="" disabled>{organisationActive.type === 'ecole' ? 'Choisir une classe' : 'Choisir un rôle'}</option>
+                  {organisationActive.roles_hierarchie.map((r) => (
+                    <option key={r} value={r}>{r}</option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  type="text"
+                  placeholder={organisationActive.type === 'ecole' ? 'Classe (optionnel)' : 'Rôle (optionnel)'}
+                  value={role}
+                  onChange={(e) => setRole(e.target.value)}
+                  className="px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent transition"
+                />
+              )}
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input
+                type="tel"
+                placeholder="Téléphone (optionnel)"
+                value={telephone}
+                onChange={(e) => setTelephone(e.target.value)}
+                className="flex-1 px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent transition"
+              />
+              {organisationActive.type === 'association' && (
+                <input
+                  type="text"
+                  placeholder="Société (optionnel)"
+                  value={societe}
+                  onChange={(e) => setSociete(e.target.value)}
+                  className="flex-1 px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent transition"
+                />
+              )}
+            </div>
+
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-1.5 px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-600 cursor-pointer hover:bg-gray-100 transition">
+                <ImagePlus size={16} />
+                Photo (optionnel)
+                <input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleChoixPhoto} className="hidden" />
+              </label>
+              {photoApercu && (
+                <img src={photoApercu} alt="Aperçu" className="w-10 h-10 rounded-full object-cover border border-gray-200" />
+              )}
+              <button
+                type="submit"
+                disabled={uploadEnCours}
+                className="ml-auto flex items-center justify-center gap-1.5 px-4 py-2.5 bg-gradient-to-r from-primary-900 to-primary-400 text-white text-sm font-medium rounded-xl hover:opacity-90 active:scale-[0.98] transition whitespace-nowrap disabled:opacity-60"
+              >
+                <Plus size={16} /> {uploadEnCours ? 'Envoi...' : 'Ajouter'}
+              </button>
+            </div>
           </form>
           {erreur && (
             <p className="text-sm text-danger-text bg-danger-bg rounded-lg px-3 py-2 mt-3 anim-apparition">{erreur}</p>

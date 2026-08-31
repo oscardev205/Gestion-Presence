@@ -16,7 +16,7 @@ async function verifierOrganisation(organisationId, adminId) {
 }
 
 router.post('/', verifierToken, async (req, res) => {
-  const { organisationId, nom, role } = req.body;
+    const { organisationId, nom, role, telephone, photoUrl, societe } = req.body;
 
   if (!organisationId || !nom) {
     return res.status(400).json({ message: 'organisationId et nom sont obligatoires' });
@@ -52,9 +52,9 @@ router.post('/', verifierToken, async (req, res) => {
     const codePin = String(Math.floor(1000 + Math.random() * 9000));
 
     const resultat = await pool.query(
-      `INSERT INTO membres (organisation_id, nom, role, identifiant, qr_code_valeur, code_pin)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [organisationId, nom, role || null, identifiant, qrCodeValeur, codePin]
+      `INSERT INTO membres (organisation_id, nom, role, identifiant, qr_code_valeur, code_pin, telephone, photo_url, societe)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+      [organisationId, nom, role || null, identifiant, qrCodeValeur, codePin, telephone || null, photoUrl || null, societe || null]
     );
 
     res.status(201).json(resultat.rows[0]);
