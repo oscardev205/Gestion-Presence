@@ -1,7 +1,6 @@
 const express = require('express');
 const ExcelJS = require('exceljs');
-const chromiumModule = require('@sparticuz/chromium');
-const chromium = chromiumModule.default || chromiumModule;
+const chromium = require('@sparticuz/chromium');
 const puppeteer = require('puppeteer-core');
 const QRCode = require('qrcode');
 const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, HeadingLevel, WidthType, AlignmentType } = require('docx');
@@ -259,7 +258,12 @@ function genererHtmlCarte(membre, qrDataUrl, format) {
     : `<div class="photo photo-defaut">${echapperHtml(initialesDeNom(membre.nom))}</div>`;
 
   const societeHtml = membre.organisation_type === 'association' && membre.societe
-    ? `<p class="societe">${echapperHtml(membre.societe)}</p>`
+    ? `<div class="ligne-info"><span class="puce"></span>${echapperHtml(membre.societe)}</div>`
+    : '';
+
+  const iconeTelephone = `<svg viewBox="0 0 24 24" class="icone-tel"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C11 21 3 13 3 4.9c0-.6.4-1 1-1h3.4c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.4 0 .8-.2 1L6.6 10.8z" fill="currentColor"/></svg>`;
+  const telephoneHtml = membre.telephone
+    ? `<div class="ligne-info">${iconeTelephone}${echapperHtml(membre.telephone)}</div>`
     : '';
 
   return `
@@ -270,44 +274,86 @@ function genererHtmlCarte(membre, qrDataUrl, format) {
       body { font-family: Arial, sans-serif; }
       .carte {
         width: ${largeur}; height: ${hauteur};
-        display: flex; flex-direction: column; align-items: center; justify-content: center;
-        background: ${fondCss}; color: #ffffff; position: relative; overflow: hidden;
+        display: flex; align-items: center; justify-content: center;
+        background: #085041; color: #ffffff; position: relative; overflow: hidden;
         page-break-after: always;
       }
-      .org-nom {
-        position: absolute; top: 3mm; left: 0; right: 0; text-align: center;
-        font-size: 7px; font-weight: bold; letter-spacing: 0.5px;
-        text-shadow: 0 1px 2px rgba(0,0,0,0.35);
+      .fond-recto {
+        position: absolute; inset: 0; background: ${fondCss};
       }
-      .photo {
-        width: ${estVertical ? '18mm' : '15mm'}; height: ${estVertical ? '18mm' : '15mm'};
-        border-radius: 50%; object-fit: cover; border: 1px solid #ffffff;
-        background: #ffffff;
+      .voile-bas {
+        position: absolute; left: 0; right: 0; bottom: 0;
+        height: ${estVertical ? '58%' : '75%'};
+        background: linear-gradient(to bottom, rgba(4,52,44,0) 0%, rgba(4,52,44,0.55) 40%, rgba(4,52,44,0.95) 100%);
       }
+      .contenu-recto {
+        position: relative; width: 100%; height: 100%;
+        display: flex; flex-direction: ${estVertical ? 'column' : 'row'}; align-items: ${estVertical ? 'center' : 'stretch'};
+      }
+      .zone-photo {
+        display: flex; align-items: ${estVertical ? 'flex-start' : 'center'}; justify-content: center;
+        padding-top: ${estVertical ? '6mm' : '0'};
+        width: ${estVertical ? '100%' : '38%'};
+      }
+      .photo, .photo-defaut {
+        width: ${estVertical ? '20mm' : '17mm'}; height: ${estVertical ? '20mm' : '17mm'};
+        border-radius: 50%; border: 0.6mm solid #ffffff; box-shadow: 0 1mm 2mm rgba(0,0,0,0.25);
+      }
+      .photo { object-fit: cover; }
       .photo-defaut {
         display: flex; align-items: center; justify-content: center;
-        font-size: 14px; font-weight: bold; color: #085041;
+        font-size: 5mm; font-weight: bold; color: #085041; background: #e1f5ee;
       }
-      .nom { font-size: 10px; font-weight: bold; margin-top: 2mm; text-align: center; padding: 0 3mm; text-shadow: 0 1px 2px rgba(0,0,0,0.35); }
-      .role { font-size: 7px; margin-top: 0.5mm; opacity: 0.9; text-align: center; }
-      .societe { font-size: 6.5px; margin-top: 0.5mm; opacity: 0.85; text-align: center; }
-      .pill {
-        margin-top: 2mm; padding: 1mm 3mm; background: rgba(255,255,255,0.9); color: #085041;
-        border-radius: 10mm; font-size: 7.5px; font-weight: bold;
+      .org-pill {
+        position: absolute; top: 3mm; ${estVertical ? 'left: 3mm;' : 'right: 3mm;'}
+        background: #ffffff; color: #085041; font-size: 2.3mm; font-weight: bold;
+        padding: 1mm 2.6mm; border-radius: 3mm; letter-spacing: 0.2mm; white-space: nowrap;
       }
-      .verso { justify-content: center; }
-      .qr { width: ${estVertical ? '28mm' : '24mm'}; height: ${estVertical ? '28mm' : '24mm'}; background: #ffffff; padding: 2mm; border-radius: 2mm; }
-      .verso-id { font-size: 7px; font-weight: bold; margin-top: 2mm; }
-      .verso-footer { font-size: 5.5px; margin-top: 1mm; opacity: 0.85; text-align: center; padding: 0 3mm; }
+      .accent-ligne { width: 8mm; height: 0.6mm; background: #5dcaa5; border-radius: 1mm; }
+      .zone-texte {
+        position: relative; z-index: 1;
+        display: flex; flex-direction: column; justify-content: flex-end;
+        padding: ${estVertical ? '0 4mm 5mm 4mm' : '4mm 4mm 4mm 0'};
+        width: ${estVertical ? '100%' : '62%'};
+        flex: 1;
+      }
+      .accent-wrap { display: flex; justify-content: ${estVertical ? 'center' : 'flex-start'}; margin-bottom: 2mm; }
+      .nom { font-size: ${estVertical ? '4.6mm' : '4.2mm'}; font-weight: bold; text-align: ${estVertical ? 'center' : 'left'}; line-height: 1.15; margin-bottom: 1.4mm; }
+      .role { font-size: 2.7mm; opacity: 0.92; text-align: ${estVertical ? 'center' : 'left'}; margin-bottom: 1.6mm; }
+      .ligne-info {
+        display: flex; align-items: center; justify-content: ${estVertical ? 'center' : 'flex-start'};
+        gap: 1.4mm; font-size: 2.5mm; opacity: 0.92; margin-bottom: 1.2mm;
+      }
+      .puce { width: 1.2mm; height: 1.2mm; border-radius: 50%; background: #5dcaa5; flex-shrink: 0; }
+      .icone-tel { width: 3mm; height: 3mm; color: #5dcaa5; flex-shrink: 0; }
+      .pill-id {
+        margin-top: 1.4mm; align-self: ${estVertical ? 'center' : 'flex-start'};
+        padding: 1.2mm 3.4mm; background: #5dcaa5; color: #04342c;
+        border-radius: 6mm; font-size: 2.7mm; font-weight: bold;
+      }
+      .verso { flex-direction: column; background: #085041; }
+      .qr { width: ${estVertical ? '30mm' : '26mm'}; height: ${estVertical ? '30mm' : '26mm'}; background: #ffffff; padding: 2.5mm; border-radius: 2mm; }
+      .verso-id { font-size: 3mm; font-weight: bold; margin-top: 2.5mm; }
+      .verso-footer { font-size: 2.1mm; margin-top: 1.2mm; opacity: 0.85; text-align: center; padding: 0 4mm; }
     </style></head>
     <body>
       <div class="carte">
-        <div class="org-nom">${echapperHtml(membre.organisation_nom)}</div>
-        ${photoHtml}
-        <p class="nom">${echapperHtml(membre.nom)}</p>
-        ${membre.role ? `<p class="role">${echapperHtml(membre.role)}</p>` : ''}
-        ${societeHtml}
-        <div class="pill">${echapperHtml(membre.identifiant)}</div>
+        <div class="fond-recto"></div>
+        <div class="voile-bas"></div>
+        <div class="contenu-recto">
+          <div class="org-pill">${echapperHtml(membre.organisation_nom)}</div>
+          <div class="zone-photo">
+            ${photoHtml}
+          </div>
+          <div class="zone-texte">
+            <div class="accent-wrap"><div class="accent-ligne"></div></div>
+            <p class="nom">${echapperHtml(membre.nom)}</p>
+            ${membre.role ? `<p class="role">${echapperHtml(membre.role)}</p>` : ''}
+            ${societeHtml}
+            ${telephoneHtml}
+            <div class="pill-id">${echapperHtml(membre.identifiant)}</div>
+          </div>
+        </div>
       </div>
       <div class="carte verso">
         <img src="${qrDataUrl}" class="qr" />
