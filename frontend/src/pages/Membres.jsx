@@ -65,9 +65,7 @@ function Membres() {
         const formData = new FormData();
         formData.append('fichier', photoFile);
         formData.append('dossier', 'membres');
-        const reponseUpload = await api.post('/upload', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
+        const reponseUpload = await api.post('/upload', formData);
         photoUrl = reponseUpload.data.url;
         setUploadEnCours(false);
       }
